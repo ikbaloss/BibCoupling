@@ -248,9 +248,12 @@ if uploaded_file is not None:
             pv_net.toggle_physics(True)
             pv_net.barnes_hut(gravity=-8000, central_gravity=0.3, spring_length=120)
             
-            # 3. ADVANCED VIS.JS INTERACTION CONFIGURATION
-            # This forces edge popups to trigger ONLY on a click event, keeping hovers completely silent.
-            interaction_options = """
+            # 1. Generate the base layout HTML from Pyvis
+            html_data = pv_net.generate_html()
+            
+            # 2. Inject our advanced Vis.js click/hover configuration directly into the HTML string
+            interaction_script = """
+            // Define advanced interaction settings
             var options = {
               "interaction": {
                 "hover": true,
@@ -261,10 +264,10 @@ if uploaded_file is not None:
                   "hover": false
                 }
               }
-            }
+            };
             network.setOptions(options);
             
-            // Override the hover event behavior for edges specifically
+            // Suppress standard hover popups for edges
             network.on("hoverEdge", function (params) {
                 network.interactionHandler._hideTooltip();
             });
@@ -272,7 +275,7 @@ if uploaded_file is not None:
                 network.interactionHandler._hideTooltip();
             });
             
-            // Trigger the pop-up panel only when the user explicitly clicks an edge
+            // Bind the reference tooltip container to explicit click events instead
             network.on("click", function (params) {
                 if (params.edges.length > 0 && params.nodes.length === 0) {
                     var edgeId = params.edges[0];
@@ -283,9 +286,11 @@ if uploaded_file is not None:
                 }
             });
             """
-            pv_net.set_javascript(interaction_options)
             
-            html_data = pv_net.generate_html()
+            # We stitch our custom behavior right before the closing draw script tag
+            html_data = html_data.replace("drawGraph();", f"drawGraph();\n{interaction_script}")
+            
+            # 3. Render the modified layout seamlessly inside Streamlit
             components.html(html_data, height=620, scrolling=False)
         else:
             st.warning("The operational configuration criteria contains 0 valid graphical nodes.")
