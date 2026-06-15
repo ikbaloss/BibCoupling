@@ -1,0 +1,6 @@
+streamlit
+pandas
+networkx
+igraph
+leidenalg
+pyvis
