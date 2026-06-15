@@ -59,7 +59,7 @@ def build_bibliographic_coupling_network(df):
             set_j_lower = {r.lower() for r in ref_sets[j]}
             
             # Find overlapping keys
-            shared_keys = set_i_lower.keys().intersection(set_j_lower)
+            shared_keys = set(set_i_lower.keys()).intersection(set_j_lower)
             weight = len(shared_keys)
             
             if weight > 0:
