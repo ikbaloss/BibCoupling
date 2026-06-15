@@ -191,18 +191,18 @@ if uploaded_file is not None:
     # Network Metrics Calculations
     eigen_centrality = {}
     if len(display_graph.nodes) > 0:
-        if st.session_state.is_clustered and selected_cluster != "All":
-            # Compute sub-cluster specific eigenvector centrality matching Gephi behaviors
+        # Step 1: Try calculating standard unweighted Eigenvector Centrality (Highly stable)
+        try:
+            eigen_centrality = nx.eigenvector_centrality(display_graph, max_iter=1000, weight=None)
+        except nx.PowerIterationFailedConvergence:
+            # Step 2: Fallback to Numpy solver if power iteration fails to converge
             try:
-                eigen_centrality = nx.eigenvector_centrality_numpy(display_graph, weight='weight')
+                eigen_centrality = nx.eigenvector_centrality_numpy(display_graph, weight=None)
             except:
-                eigen_centrality = {node: 0.0 for node in display_graph.nodes}
-        else:
-            # Fallback uniform centrality metric for general viewports
-            try:
-                eigen_centrality = nx.eigenvector_centrality_numpy(display_graph, weight='weight')
-            except:
-                eigen_centrality = {node: 0.0 for node in display_graph.nodes}
+                # Step 3: Ultimate fallback to Degree Centrality (Never fails, counts total connections)
+                eigen_centrality = nx.degree_centrality(display_graph)
+        except:
+            eigen_centrality = nx.degree_centrality(display_graph)
                 
         nx.set_node_attributes(display_graph, eigen_centrality, 'centrality')
 
