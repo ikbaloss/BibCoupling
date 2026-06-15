@@ -253,11 +253,17 @@ if uploaded_file is not None:
             gml_buffer = io.BytesIO()
             exportable_graph = working_graph.copy()
             
-            # Sanitize list data types out of edge profiles before executing GML parser sequences
+            # 1. Cleanse complex data types out of node profiles
+            for node, data in exportable_graph.nodes(data=True):
+                if 'refs' in data:
+                    del data['refs']
+            
+            # 2. Cleanse complex data types out of edge profiles
             for u, v, d in exportable_graph.edges(data=True):
                 if 'shared_refs' in d:
                     del d['shared_refs']
                     
+            # 3. Now it is 100% safe to run the NetworkX GML compiler
             nx.write_gml(exportable_graph, gml_buffer)
             
             st.download_button(
