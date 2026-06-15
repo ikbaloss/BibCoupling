@@ -212,35 +212,78 @@ if uploaded_file is not None:
                 "Cluster 4": "#d62728", "Cluster 5": "#9467bd", "Cluster 6": "#8c564b"
             }
             
+            # 1. Populate Nodes with formatted multi-line hover data
             for node, data in display_graph.nodes(data=True):
                 c_val = data.get('cluster', 'Unclustered')
                 color = cluster_color_map.get(c_val, "#7f7f7f") if st.session_state.is_clustered else "#1f77b4"
                 size_factor = 10 + (data.get('centrality', 0.1) * 40)
                 
-                hover_title = f"<b>{node}</b><br>Title: {data.get('title')}<br>Cluster: {c_val}"
+                # Format hover information cleanly from top to bottom
+                hover_title = (
+                    f"Authors: {data.get('authors')}<br>"
+                    f"Year: {data.get('year')}<br>"
+                    f"Title: {data.get('title')}"
+                )
                 pv_net.add_node(node, label=node, title=hover_title, color=color, size=size_factor)
                 
+            # 2. Populate Edges with numbered reference strings
             for u, v, d in display_graph.edges(data=True):
                 w = d.get('weight', 1)
                 shared_list = d.get('shared_refs', [])
                 
-                # Format an elegant HTML breakdown for the hover tooltip popup box
-                refs_html = "<br>".join([f"• {r}" for r in sorted(shared_list)])
+                # Format a numbered list for the references
+                refs_html = "".join([f"{i+1}. {r}<br>" for i, r in enumerate(sorted(shared_list))])
                 edge_popup_title = f"<b>Shared References ({w}):</b><br><div style='max-height:200px; overflow-y:auto; font-size:11px;'>{refs_html}</div>"
                 
-                # Determine text label display status based on checkbox state
                 edge_label_text = str(w) if show_edge_labels else ""
                 
                 pv_net.add_edge(
                     u, v, 
                     value=w, 
                     label=edge_label_text, 
-                    title=edge_popup_title,
+                    title=edge_popup_title, # This remains the data container
                     color="#cccccc"
                 )
                 
             pv_net.toggle_physics(True)
             pv_net.barnes_hut(gravity=-8000, central_gravity=0.3, spring_length=120)
+            
+            # 3. ADVANCED VIS.JS INTERACTION CONFIGURATION
+            # This forces edge popups to trigger ONLY on a click event, keeping hovers completely silent.
+            interaction_options = """
+            var options = {
+              "interaction": {
+                "hover": true,
+                "tooltipDelay": 100
+              },
+              "edges": {
+                "interaction": {
+                  "hover": false
+                }
+              }
+            }
+            network.setOptions(options);
+            
+            // Override the hover event behavior for edges specifically
+            network.on("hoverEdge", function (params) {
+                network.interactionHandler._hideTooltip();
+            });
+            network.on("blurEdge", function (params) {
+                network.interactionHandler._hideTooltip();
+            });
+            
+            // Trigger the pop-up panel only when the user explicitly clicks an edge
+            network.on("click", function (params) {
+                if (params.edges.length > 0 && params.nodes.length === 0) {
+                    var edgeId = params.edges[0];
+                    var edgeData = network.body.edges[edgeId];
+                    if (edgeData && edgeData.options.title) {
+                        network.interactionHandler.showTooltip(edgeData.options.title, params.pointer.DOM);
+                    }
+                }
+            });
+            """
+            pv_net.set_javascript(interaction_options)
             
             html_data = pv_net.generate_html()
             components.html(html_data, height=620, scrolling=False)
