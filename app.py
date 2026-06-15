@@ -74,7 +74,7 @@ def filter_network(G, min_weight):
     F.remove_edges_from(broken_edges)
     
     # Remove isolated nodes
-    isolated_nodes = list(nx.isolated_nodes(F))
+    isolated_nodes = list(nx.isolates(F))
     F.remove_nodes_from(isolated_nodes)
     
     return F
