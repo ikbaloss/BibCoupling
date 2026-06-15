@@ -278,17 +278,22 @@ if uploaded_file is not None:
     # -----------------------------------------------------------------------------
     # 4. RANKED TABULAR VIEWPORT ENGINE (Top N Records Section)
     # -----------------------------------------------------------------------------
+    
     if st.session_state.is_clustered and selected_cluster != "All" and len(display_graph.nodes) > 0:
         st.write("---")
         st.subheader("📋 Top Centrality Cluster Records")
         
-        # Force the default starting value to scale down automatically for tiny clusters
-        default_value = min(5, int(total_cluster_count))
+        # 1. Dynamically calculate how many papers are actually in this specific cluster
+        cluster_size = len(display_graph.nodes)
         
+        # 2. Safely choose a default value (5, or less if the cluster is tiny)
+        default_value = min(5, cluster_size)
+        
+        # 3. Constrain the input widget using the real cluster size bounds
         top_n = st.number_input(
             "Top N Nodes Selection Size", 
             min_value=1, 
-            max_value=int(total_cluster_count), 
+            max_value=max(1, cluster_size), 
             value=default_value
         )
         show_table = st.button("Show Top N Data")
