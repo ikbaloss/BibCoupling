@@ -282,7 +282,15 @@ if uploaded_file is not None:
         st.write("---")
         st.subheader("📋 Top Centrality Cluster Records")
         
-        top_n = st.number_input("Top N Nodes Selection Size", min_value=1, max_value=len(display_graph.nodes), value=5)
+        # Force the default starting value to scale down automatically for tiny clusters
+        default_value = min(5, int(total_cluster_count))
+        
+        top_n = st.number_input(
+            "Top N Nodes Selection Size", 
+            min_value=1, 
+            max_value=int(total_cluster_count), 
+            value=default_value
+        )
         show_table = st.button("Show Top N Data")
         
         if show_table:
