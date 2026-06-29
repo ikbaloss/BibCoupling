@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bibliographic Coupling Analyzer & Staged Multi-AI Synthesis Engine</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        #network-canvas {
+            height: 550px;
+            width: 100%;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans relative m-0 p-0 min-h-screen">
+
+    <header class="bg-white border-b border-gray-200 py-4 px-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">🔬 Bibliographic Coupling Network Analyzer & Staged Multi-AI Engine</h1>
+            <p class="text-sm text-gray-500">Staged Literature Pipeline: Network Partitions ➔ Granular Micro-Cluster Extraction ➔ Cross-Provider Synthesis</p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 text-xs text-amber-800 flex items-center gap-2">
+            <span class="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+            Multi-Provider AI Core Ready
+        </div>
+    </header>
+
+    <div class="flex flex-col lg:flex-row min-h-[calc(100vh-73px)]">
+        <aside class="w-full lg:w-80 bg-white border-r border-gray-200 p-6 flex flex-col gap-5 shrink-0 overflow-y-auto">
+            <div>
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">🔑 Step 1: AI Engine Setup</h2>
+                
+                <label class="block text-[11px] font-medium text-gray-600 mb-1">Select AI Provider</label>
+                <select id="ai-provider-select" class="w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs bg-white mb-2 focus:outline-hidden focus:ring-2 focus:ring-amber-500">
+                    <option value="gemini">Google Gemini Cloud</option>
+                    <option value="groq">Groq Inference Engine</option>
+                </select>
+
+                <label id="api-key-label" class="block text-[11px] font-medium text-gray-600 mb-1">Gemini API Key</label>
+                <input type="password" id="ai-api-key" placeholder="AIzaSy... or gsk_..." class="w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs font-mono bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-amber-500 focus:bg-white" />
+                <p class="text-[10px] text-gray-400 mt-1">Processed locally on your device. If left blank, the system falls back to native text heuristics.</p>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <div>
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">📁 Step 2: Ingest Scopus Matrix</h2>
+                <input type="file" id="csv-file-input" accept=".csv" class="w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+            </div>
+
+            <hr class="border-gray-100">
+
+            <div>
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">⚙️ Topology Controls</h2>
+                <label class="block text-[11px] font-medium text-gray-600 mb-1">Minimum Edge Weight Threshold</label>
+                <input type="number" id="min-weight-input" min="1" value="1" step="1" class="w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500" disabled />
+                <div class="mt-2.5 flex items-center">
+                    <input type="checkbox" id="show-weights-checkbox" class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded-sm focus:ring-blue-500" disabled />
+                    <label class="ml-2 text-[11px] font-medium text-gray-600">Show Edge Weights on Map</label>
+                </div>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <div>
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">🤖 Community Partitioning</h2>
+                <button id="run-clustering-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-md text-xs shadow-xs disabled:bg-gray-300 disabled:cursor-not-allowed transition" disabled>
+                    Run Leiden Clustering
+                </button>
+                <label class="block text-[11px] font-medium text-gray-600 mt-3 mb-1">Select Cluster for Micro-Analysis</label>
+                <select id="cluster-filter-select" class="w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500" disabled>
+                    <option value="All">All Active Network</option>
+                </select>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <div class="mt-auto pt-4 flex flex-col gap-2">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Data Export Layouts</h2>
+                <button id="export-gml-btn" class="w-full border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium py-1.5 px-4 rounded-md text-xs shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition" disabled>
+                    📥 Export Full GML File
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-6 flex flex-col gap-6 overflow-x-hidden">
+            <div id="initial-info-prompt" class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-md">
+                <p class="text-sm text-blue-700">System awaiting configuration mapping. Configure authentication tokens in the panel, and drop a standard Scopus format CSV matrix to start visualization modeling.</p>
+            </div>
+
+            <div id="workspace-container" class="hidden flex-1 flex flex-col gap-6">
+                <div>
+                    <div class="flex justify-between items-end mb-2">
+                        <div>
+                            <h3 id="map-header" class="text-lg font-semibold text-gray-900">Network Visualization Map</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="open-cluster-refs-btn" class="hidden bg-slate-900 hover:bg-slate-800 text-white font-semibold py-1.5 px-3 rounded-md text-xs transition shadow-xs items-center gap-1.5 cursor-pointer">
+                                📊 View Shared References
+                            </button>
+                            <button id="open-cluster-keywords-btn" class="hidden bg-blue-900 hover:bg-blue-800 text-white font-semibold py-1.5 px-3 rounded-md text-xs transition shadow-xs items-center gap-1.5 cursor-pointer">
+                                🔑 View Shared Keywords
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">💡 Pro-Tip: Hover for titles. <b>Single-click link line</b> to see shared keywords. <b>Double-click link line</b> to launch full shared bibliography popup.</p>
+                    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                        <div class="xl:col-span-3">
+                            <div id="network-canvas"></div>
+                        </div>
+                        
+                        <div class="xl:col-span-1 flex flex-col gap-4">
+                            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-xs">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Network Metrics Analytics</h4>
+                                <div class="text-xs space-y-2 text-gray-600">
+                                    <p class="flex justify-between"><span>Total Ingested Nodes:</span> <span id="stat-total-nodes" class="font-bold text-gray-900">0</span></p>
+                                    <p class="flex justify-between"><span>Visible Active Nodes:</span> <span id="stat-visible-nodes" class="font-bold text-gray-900">0</span></p>
+                                    <p class="flex justify-between"><span>Active Graph Links:</span> <span id="stat-visible-edges" class="font-bold text-gray-900">0</span></p>
+                                </div>
+                            </div>
+
+                            <div class="bg-amber-900/5 border border-amber-200/60 rounded-lg p-4 flex flex-col gap-2">
+                                <h4 class="text-xs font-bold text-amber-900 uppercase tracking-wide">Memory Pipeline Registry</h4>
+                                <p class="text-[11px] text-amber-800 leading-normal">The multi-AI engine dynamically caches individual cluster summaries in this register block to build the final emergent macro taxonomy.</p>
+                                <div id="pipeline-status-indicator" class="text-xs font-mono font-semibold text-amber-700 mt-1">
+                                    Status: 0 Clusters Registries Armed
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tabular-section-panel" class="hidden border-t border-gray-200 pt-6 flex flex-col gap-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-2">📋 Top Centrality Cluster Records</h3>
+                        <div class="flex items-end gap-4 mb-4 flex-wrap">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Top N Nodes Selection Size</label>
+                                <input type="number" id="top-n-input" min="1" value="5" class="w-48 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <button id="show-table-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-medium py-1.5 px-4 rounded-md text-sm shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                                ⚡ Show & Synthesize with AI
+                            </button>
+                            <button id="export-table-csv-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1.5 px-4 rounded-md text-sm shadow-xs transition cursor-pointer">
+                                💾 Save Table to CSV
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto border border-gray-200 rounded-lg bg-white shadow-xs max-h-72">
+                            <table class="min-w-full divide-y divide-gray-200 text-left text-sm table-fixed">
+                                <thead class="bg-gray-50 text-xs text-gray-500 uppercase font-semibold sticky top-0">
+                                    <tr>
+                                        <th class="px-6 py-3 w-1/12">Authors</th>
+                                        <th class="px-6 py-3 w-[5%]">Year</th>
+                                        <th class="px-6 py-3 w-[18%]">Title</th>
+                                        <th class="px-6 py-3 w-[37%]">Abstract</th>
+                                        <th class="px-6 py-3 w-[25%]">Keywords</th>
+                                        <th class="px-6 py-3 w-[7%]">Normalized Centrality</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="centrality-table-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-6 grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-xs flex flex-col gap-4">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-800 px-2.5 py-1 rounded-md" id="synthesis-cluster-badge">Cluster Content</span>
+                                <h3 class="text-xl font-bold text-gray-900 mt-2">Thematic Focus Synthesis</h3>
+                            </div>
+                            <div id="thematic-paragraph-output" class="text-sm text-gray-600 leading-relaxed text-justify space-y-2">
+                                <p class="italic">Please choose a target cluster filter in the sidebar controls and click "Show & Synthesize with AI" to construct micro thematic models using full un-truncated abstract blocks.</p>
+                            </div>
+                            <div class="border-t border-gray-100 pt-4">
+                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Representative APA Citations</h4>
+                                <ul id="apa-citations-output" class="text-xs text-gray-600 space-y-2 list-none pl-0 font-mono bg-gray-50 p-3 rounded-lg border border-gray-100"></ul>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-950 text-slate-100 rounded-xl p-6 shadow-sm flex flex-col gap-4">
+                            <div class="flex justify-between items-start gap-4">
+                                <div>
+                                    <span class="text-xs font-bold uppercase tracking-wider bg-amber-400/20 text-amber-300 px-2.5 py-1 rounded-md">Macro Synthesis Domain Architecture</span>
+                                    <h3 class="text-xl font-bold text-white mt-2">Cross-Cluster Comparative Synthesis</h3>
+                                </div>
+                                <button id="run-macro-synthesis-btn" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-1.5 px-3 rounded-md text-xs shadow-md transition disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed cursor-pointer" disabled>
+                                    🧠 Generate Cross-Cluster Meta-Taxonomy
+                                </button>
+                            </div>
+                            <div id="comparative-synthesis-output" class="text-sm text-slate-300 leading-relaxed text-justify space-y-3">
+                                <p class="italic text-slate-400">Awaiting data register aggregation steps. To configure this cross-domain structural narrative, run the AI micro synthesis on your individual clusters on the left panel first. Once registries are armed, this engine maps broad conceptual frameworks and emerging paradigms across boundaries.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+    <div id="references-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[80vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-xl">
+                <div>
+                    <h3 class="text-base font-bold text-gray-900">🔗 Shared References Detail</h3>
+                    <p id="modal-network-relation" class="text-xs text-blue-600 font-medium mt-0.5"></p>
+                </div>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1 cursor-pointer">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <div class="mb-4 bg-slate-50 border border-slate-100 rounded-md px-3 py-2 text-xs text-gray-500">
+                    Total Shared Identifiers: <span id="modal-shared-count" class="font-bold text-gray-800">0</span>
+                </div>
+                <ol id="modal-references-list" class="list-decimal list-inside space-y-2 text-xs text-gray-600 leading-relaxed tracking-wide"></ol>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
+                <button id="close-modal-footer-btn" class="bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold py-2 px-4 rounded-md shadow-xs cursor-pointer">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="single-click-keywords-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-xl w-full flex flex-col max-h-[70vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-blue-50 rounded-t-xl">
+                <div>
+                    <h3 class="text-base font-bold text-gray-900">🔑 Single-Click Shared Keywords Inspector</h3>
+                    <p id="kwd-modal-network-relation" class="text-xs text-blue-600 font-medium mt-0.5"></p>
+                </div>
+                <button id="close-kwd-modal-btn" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1 cursor-pointer">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <div class="mb-3 bg-blue-50 border border-blue-100 rounded-md px-3 py-2 text-xs text-gray-600">
+                    Intersecting Keywords: <span id="kwd-modal-shared-count" class="font-bold text-gray-800">0</span>
+                </div>
+                <div id="kwd-modal-list-container" class="flex flex-wrap gap-2 pt-2"></div>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
+                <button id="close-kwd-modal-footer-btn" class="bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold py-2 px-4 rounded-md shadow-xs cursor-pointer">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cluster-refs-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full flex flex-col max-h-[85vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-xl">
+                <div>
+                    <h3 class="text-base font-bold text-gray-900">📊 Shared Reference Domain Matrix Aggregator</h3>
+                    <p id="cluster-refs-modal-title" class="text-xs text-emerald-600 font-medium mt-0.5"></p>
+                </div>
+                <button id="close-cluster-refs-modal-btn" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1 cursor-pointer">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <div class="overflow-x-auto border border-gray-200 rounded-lg bg-white shadow-xs max-h-[50vh]">
+                    <table class="min-w-full divide-y divide-gray-200 text-left text-xs table-fixed">
+                        <thead class="bg-gray-50 text-gray-500 uppercase font-semibold sticky top-0">
+                            <tr>
+                                <th class="px-6 py-3 w-4/5">Reference</th>
+                                <th class="px-6 py-3 w-1/5 text-center">Shared By (Pairs Count)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cluster-refs-table-body" class="divide-y divide-gray-200 text-gray-600"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-between gap-4">
+                <button id="save-cluster-refs-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-5 rounded-md shadow-sm transition cursor-pointer">
+                    💾 Save to CSV
+                </button>
+                <button id="close-cluster-refs-footer-btn" class="bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold py-2 px-4 rounded-md shadow-xs transition cursor-pointer">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cluster-kwds-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[85vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-xl">
+                <div>
+                    <h3 class="text-base font-bold text-gray-900">🔑 Shared Keywords Cluster Matrix Aggregator</h3>
+                    <p id="cluster-kwds-modal-title" class="text-xs text-blue-600 font-medium mt-0.5"></p>
+                </div>
+                <button id="close-cluster-kwds-modal-btn" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1 cursor-pointer">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <div class="overflow-x-auto border border-gray-200 rounded-lg bg-white shadow-xs max-h-[50vh]">
+                    <table class="min-w-full divide-y divide-gray-200 text-left text-xs table-fixed">
+                        <thead class="bg-gray-50 text-gray-500 uppercase font-semibold sticky top-0">
+                            <tr>
+                                <th class="px-6 py-3 w-3/4">Keyword</th>
+                                <th class="px-6 py-3 w-1/4 text-center">Shared by (Articles Count)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cluster-kwds-table-body" class="divide-y divide-gray-200 text-gray-600"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-between gap-4">
+                <button id="save-cluster-kwds-btn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-5 rounded-md shadow-sm transition cursor-pointer">
+                    💾 Save to CSV
+                </button>
+                <button id="close-cluster-kwds-footer-btn" class="bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold py-2 px-4 rounded-md shadow-xs transition cursor-pointer">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bibtex-inspector-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-xl w-full flex flex-col max-h-[75vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-amber-50 rounded-t-xl">
+                <div>
+                    <h3 class="text-base font-bold text-gray-900">📋 Automated BibTeX Core Generator</h3>
+                    <p class="text-xs text-amber-700 font-medium mt-0.5">Local Metadata Reference Matrix Mapping</p>
+                </div>
+                <button id="close-bibtex-modal-btn" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1 cursor-pointer">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50">
+                <pre id="bibtex-output-container" class="bg-slate-900 text-emerald-400 p-4 rounded-lg border border-slate-800 font-mono text-xs overflow-x-auto whitespace-pre select-all shadow-inner leading-relaxed"></pre>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-between items-center">
+                <button id="copy-bibtex-action-btn" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold py-2 px-4 rounded-md shadow-sm transition cursor-pointer flex items-center gap-1.5">
+                    📋 Copy BibTeX
+                </button>
+                <button id="dismiss-bibtex-footer-btn" class="bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold py-2 px-4 rounded-md shadow-xs transition cursor-pointer">
+                    Dismiss
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Structures Shared Variables
+        let rawParsedData = [];
+        let baseGraph = { nodes: new Map(), edges: [] };
+        let activeGraph = { nodes: new Map(), edges: [] };
+        let currentTableData = []; 
+        let networkInstance = null;
+        let isClustered = false;
+        let completedClusterNarratives = {}; 
+        let globalAggregatedRefsCache = [];
+        let globalAggregatedKwdsCache = []; 
+
+        const clusterColors = [
+            "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", 
+            "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
+        ];
+
+        // Cache DOM references
+        const aiProviderSelect = document.getElementById('ai-provider-select');
+        const apiKeyLabel = document.getElementById('api-key-label');
+        const aiApiKeyInput = document.getElementById('ai-api-key');
+        const fileInput = document.getElementById('csv-file-input');
+        const minWeightInput = document.getElementById('min-weight-input');
+        const showWeightsCheckbox = document.getElementById('show-weights-checkbox');
+        const runClusteringBtn = document.getElementById('run-clustering-btn');
+        const clusterFilterSelect = document.getElementById('cluster-filter-select');
+        const exportGmlBtn = document.getElementById('export-gml-btn');
+        const initialPrompt = document.getElementById('initial-info-prompt');
+        const workspaceContainer = document.getElementById('workspace-container');
+        const tabularSectionPanel = document.getElementById('tabular-section-panel');
+        const tableBody = document.getElementById('centrality-table-body');
+        const showTableBtn = document.getElementById('show-table-btn');
+        const exportTableCsvBtn = document.getElementById('export-table-csv-btn');
+        const topNInput = document.getElementById('top-n-input');
+        const runMacroSynthesisBtn = document.getElementById('run-macro-synthesis-btn');
+        const pipelineStatusIndicator = document.getElementById('pipeline-status-indicator');
+
+        // References Aggregator Handles
+        const openClusterRefsBtn = document.getElementById('open-cluster-refs-btn');
+        const clusterRefsModal = document.getElementById('cluster-refs-modal');
+        const closeClusterRefsModalBtn = document.getElementById('close-cluster-refs-modal-btn');
+        const closeClusterRefsFooterBtn = document.getElementById('close-cluster-refs-footer-btn');
+        const saveClusterRefsBtn = document.getElementById('save-cluster-refs-btn');
+        const clusterRefsTableBody = document.getElementById('cluster-refs-table-body');
+        const clusterRefsModalTitle = document.getElementById('cluster-refs-modal-title');
+
+        // Keywords Aggregator Handles
+        const openClusterKeywordsBtn = document.getElementById('open-cluster-keywords-btn');
+        const clusterKwdsModal = document.getElementById('cluster-kwds-modal');
+        const closeClusterKwdsModalBtn = document.getElementById('close-cluster-kwds-modal-btn');
+        const closeClusterKwdsFooterBtn = document.getElementById('close-cluster-kwds-footer-btn');
+        const saveClusterKwdsBtn = document.getElementById('save-cluster-kwds-btn');
+        const clusterKwdsTableBody = document.getElementById('cluster-kwds-table-body');
+        const clusterKwdsModalTitle = document.getElementById('cluster-kwds-modal-title');
+
+        // Single Click Element Handles
+        const singleClickKwdModal = document.getElementById('single-click-keywords-modal');
+        const closeKwdModalBtn = document.getElementById('close-kwd-modal-btn');
+        const closeKwdModalFooterBtn = document.getElementById('close-kwd-modal-footer-btn');
+        const kwdModalNetworkRelation = document.getElementById('kwd-modal-network-relation');
+        const kwdModalSharedCount = document.getElementById('kwd-modal-shared-count');
+        const kwdModalListContainer = document.getElementById('kwd-modal-list-container');
+
+        // NEW BIBTEX REGISTRY DOM HOOKS
+        const bibtexInspectorModal = document.getElementById('bibtex-inspector-modal');
+        const closeBibtexModalBtn = document.getElementById('close-bibtex-modal-btn');
+        const dismissBibtexFooterBtn = document.getElementById('dismiss-bibtex-footer-btn');
+        const copyBibtexActionBtn = document.getElementById('copy-bibtex-action-btn');
+        const bibtexOutputContainer = document.getElementById('bibtex-output-container');
+
+        // Textual Engine Nodes
+        const synthesisClusterBadge = document.getElementById('synthesis-cluster-badge');
+        const thematicParagraphOutput = document.getElementById('thematic-paragraph-output');
+        const apaCitationsOutput = document.getElementById('apa-citations-output');
+        const comparativeSynthesisOutput = document.getElementById('comparative-synthesis-output');
+
+        // Modal Edge References Handles
+        const refsModal = document.getElementById('references-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const closeModalFooterBtn = document.getElementById('close-modal-footer-btn');
+        const modalRelationText = document.getElementById('modal-network-relation');
+        const modalSharedCount = document.getElementById('modal-shared-count');
+        const modalReferencesList = document.getElementById('modal-references-list');
+
+        // Binding Triggers
+        aiProviderSelect.addEventListener('change', handleProviderToggle);
+        fileInput.addEventListener('change', handleFileUpload);
+        minWeightInput.addEventListener('input', () => processPipeline(false));
+        showWeightsCheckbox.addEventListener('change', () => renderNetworkVisuals());
+        runClusteringBtn.addEventListener('click', runNativeModularityClustering);
+        clusterFilterSelect.addEventListener('change', () => processPipeline(false));
+        showTableBtn.addEventListener('click', generateThematicParagraphAI);
+        exportTableCsvBtn.addEventListener('click', saveTableToCsvFile);
+        runMacroSynthesisBtn.addEventListener('click', executeGlobalComparativeSynthesisAI);
+
+        closeModalBtn.addEventListener('click', hideModalOverlay);
+        closeModalFooterBtn.addEventListener('click', hideModalOverlay);
+        refsModal.addEventListener('click', (e) => { if(e.target === refsModal) hideModalOverlay(); });
+
+        // Cluster Actions Listeners
+        openClusterRefsBtn.addEventListener('click', compileAndOpenClusterReferencesMatrixPopup);
+        closeClusterRefsModalBtn.addEventListener('click', () => clusterRefsModal.classList.add('hidden'));
+        closeClusterRefsFooterBtn.addEventListener('click', () => clusterRefsModal.classList.add('hidden'));
+        saveClusterRefsBtn.addEventListener('click', downloadClusterReferencesMatrixToCSV);
+
+        // Keywords Matrix Actions Listeners
+        openClusterKeywordsBtn.addEventListener('click', compileAndOpenClusterKeywordsMatrixPopup);
+        closeClusterKwdsModalBtn.addEventListener('click', () => clusterKwdsModal.classList.add('hidden'));
+        closeClusterKwdsFooterBtn.addEventListener('click', () => clusterKwdsModal.classList.add('hidden'));
+        saveClusterKwdsBtn.addEventListener('click', downloadClusterKeywordsMatrixToCSV);
+
+        // Single Click Closed Triggers
+        closeKwdModalBtn.addEventListener('click', () => singleClickKwdModal.classList.add('hidden'));
+        closeKwdModalFooterBtn.addEventListener('click', () => singleClickKwdModal.classList.add('hidden'));
+
+        // NEW BIBTEX ACTION BINDING LOGIC
+        closeBibtexModalBtn.addEventListener('click', () => bibtexInspectorModal.classList.add('hidden'));
+        dismissBibtexFooterBtn.addEventListener('click', () => bibtexInspectorModal.classList.add('hidden'));
+        copyBibtexActionBtn.addEventListener('click', copyBibtexBlockContentToClipboard);
+
+        function handleProviderToggle() {
+            const provider = aiProviderSelect.value;
+            if (provider === 'gemini') {
+                apiKeyLabel.innerText = "Gemini API Key";
+                aiApiKeyInput.placeholder = "AIzaSy...";
+            } else {
+                apiKeyLabel.innerText = "Groq API Key";
+                aiApiKeyInput.placeholder = "gsk_...";
+            }
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    rawParsedData = parseScopusData(results.data);
+                    buildBibliographicCouplingNetwork(rawParsedData);
+                    
+                    minWeightInput.disabled = false;
+                    showWeightsCheckbox.disabled = false;
+                    runClusteringBtn.disabled = false;
+                    exportGmlBtn.disabled = false;
+                    initialPrompt.classList.add('hidden');
+                    workspaceContainer.classList.remove('hidden');
+                    
+                    document.getElementById('stat-total-nodes').innerText = baseGraph.nodes.size;
+                    processPipeline(true);
+                }
+            });
+        }
+
+        function parseScopusData(data) {
+            return data.map(row => {
+                const authorRaw = row['Authors'] || 'Unknown';
+                const firstAuthor = authorRaw.split(',')[0].trim();
+                const year = parseInt(row['Year']) || new Date().getFullYear();
+                const label = `${firstAuthor} (${year})`;
+                const rawKeywords = row['Author Keywords'] || row['Keywords'] || '';
+                const refsRaw = row['References'] || '';
+                const refSet = new Set();
+
+                if (refsRaw) {
+                    const rawElements = refsRaw.split('); ');
+                    rawElements.forEach(item => {
+                        let cleanedItem = item.trim();
+                        if (cleanedItem) {
+                            if (!cleanedItem.endsWith(')')) cleanedItem += ')';
+                            refSet.add(cleanedItem);
+                        }
+                    });
+                }
+
+                // Preserved mapping to record full original row trace context for complete BibTeX processing loops
+                return {
+                    id: label,
+                    authors: authorRaw,
+                    year: year,
+                    title: row['Title'] || 'Untitled Document',
+                    abstract: row['Abstract'] || '',
+                    keywords: rawKeywords, 
+                    sourceVolume: row['Volume'] || '',
+                    sourceJournal: row['Source title'] || 'Scopus Matrix Element Vector',
+                    sourcePage: row['Page start'] && row['Page end'] ? `${row['Page start']}-${row['Page end']}` : '',
+                    refSet: refSet,
+                    cluster: 'Unclustered',
+                    centrality: 0
+                };
+            });
+        }
+
+        function buildBibliographicCouplingNetwork(parsedRows) {
+            baseGraph.nodes.clear();
+            baseGraph.edges = [];
+
+            parsedRows.forEach(row => { baseGraph.nodes.set(row.id, row); });
+            const nodeList = Array.from(baseGraph.nodes.values());
+            const len = nodeList.length;
+
+            for (let i = 0; i < len; i++) {
+                const nodeI = nodeList[i];
+                const lowerI = new Map(Array.from(nodeI.refSet).map(r => [r.toLowerCase(), r]));
+
+                for (let j = i + 1; j < len; j++) {
+                    const nodeJ = nodeList[j];
+                    const sharedRefs = [];
+
+                    nodeJ.refSet.forEach(ref => {
+                        const lowerRef = ref.toLowerCase();
+                        if (lowerI.has(lowerRef)) sharedRefs.push(lowerI.get(lowerRef));
+                    });
+
+                    if (sharedRefs.length > 0) {
+                        baseGraph.edges.push({
+                            source: nodeI.id,
+                            target: nodeJ.id,
+                            weight: sharedRefs.length,
+                            sharedRefs: sharedRefs.sort()
+                        });
+                    }
+                }
+            }
+        }
+
+        function processPipeline(resetClustering = false) {
+            if (resetClustering) {
+                isClustered = false;
+                runClusteringBtn.disabled = false;
+                clusterFilterSelect.disabled = true;
+                clusterFilterSelect.innerHTML = '<option value="All">All Active Network</option>';
+                tabularSectionPanel.classList.add('hidden');
+                openClusterRefsBtn.classList.replace('flex', 'hidden');
+                openClusterKeywordsBtn.classList.replace('flex', 'hidden');
+                baseGraph.nodes.forEach(n => n.cluster = 'Unclustered');
+                completedClusterNarratives = {};
+                updatePipelineDisplay();
+            }
+
+            const minWeight = parseInt(minWeightInput.value) || 1;
+            const selectedCluster = clusterFilterSelect.value;
+
+            const filteredEdges = baseGraph.edges.filter(e => e.weight >= minWeight);
+            const connectedNodeIds = new Set();
+            filteredEdges.forEach(e => { connectedNodeIds.add(e.source); connectedNodeIds.add(e.target); });
+
+            activeGraph.nodes.clear();
+            baseGraph.nodes.forEach((node, id) => {
+                if (connectedNodeIds.has(id)) {
+                    if (selectedCluster === 'All' || node.cluster === selectedCluster) {
+                        activeGraph.nodes.set(id, { ...node });
+                    }
+                }
+            });
+
+            activeGraph.edges = filteredEdges.filter(e => activeGraph.nodes.has(e.source) && activeGraph.nodes.has(e.target));
+            calculateDegreeCentrality();
+
+            document.getElementById('stat-visible-nodes').innerText = activeGraph.nodes.size;
+            document.getElementById('stat-visible-edges').innerText = activeGraph.edges.length;
+            document.getElementById('map-header').innerText = `Network Map — Displaying ${activeGraph.nodes.size} Active Nodes`;
+
+            if (isClustered && selectedCluster !== 'All') {
+                openClusterRefsBtn.classList.replace('hidden', 'flex');
+                openClusterKeywordsBtn.classList.replace('hidden', 'flex');
+                openClusterRefsBtn.innerText = `📊 View Shared References for ${selectedCluster}`;
+                openClusterKeywordsBtn.innerText = `🔑 View Shared Keywords for ${selectedCluster}`;
+            } else {
+                openClusterRefsBtn.classList.replace('flex', 'hidden');
+                openClusterKeywordsBtn.classList.replace('flex', 'hidden');
+            }
+
+            if (isClustered && activeGraph.nodes.size > 0) {
+                tabularSectionPanel.classList.remove('hidden');
+                topNInput.max = activeGraph.nodes.size;
+                synthesisClusterBadge.innerText = selectedCluster === 'All' ? "All Active Clusters View" : selectedCluster;
+                buildCentralityReportTableOnly();
+            } else {
+                tabularSectionPanel.classList.add('hidden');
+            }
+
+            renderNetworkVisuals();
+        }
+
+        function calculateDegreeCentrality() {
+            activeGraph.nodes.forEach(n => n.centrality = 0);
+            activeGraph.edges.forEach(e => {
+                if (activeGraph.nodes.has(e.source)) activeGraph.nodes.get(e.source).centrality++;
+                if (activeGraph.nodes.has(e.target)) activeGraph.nodes.get(e.target).centrality++;
+            });
+
+            let maxDeg = 0;
+            activeGraph.nodes.forEach(n => { if (n.centrality > maxDeg) maxDeg = n.centrality; });
+            if (maxDeg > 0) activeGraph.nodes.forEach(n => n.centrality = n.centrality / maxDeg);
+        }
+
+        function runNativeModularityClustering() {
+            if (activeGraph.nodes.size === 0) return;
+
+            const nodeIds = Array.from(activeGraph.nodes.keys());
+            const nodeToIndex = new Map(nodeIds.map((id, idx) => [id, idx]));
+            let communities = nodeIds.map((_, idx) => idx);
+            
+            const adj = nodeIds.map(() => []);
+            activeGraph.edges.forEach(e => {
+                const u = nodeToIndex.get(e.source);
+                const v = nodeToIndex.get(e.target);
+                if (u !== undefined && v !== undefined) {
+                    adj[u].push({ to: v, w: e.weight });
+                    adj[v].push({ to: u, w: e.weight });
+                }
+            });
+
+            let improvement = true;
+            let loops = 0;
+            while (improvement && loops < 15) {
+                improvement = false;
+                loops++;
+                for (let i = 0; i < nodeIds.length; i++) {
+                    const currentComm = communities[i];
+                    const commWeights = new Map();
+                    
+                    adj[i].forEach(edge => {
+                        const neighborComm = communities[edge.to];
+                        commWeights.set(neighborComm, (commWeights.get(neighborComm) || 0) + edge.w);
+                    });
+                    
+                    let bestComm = currentComm;
+                    let maxWeight = 0;
+                    commWeights.forEach((w, comm) => { if (w > maxWeight) { maxWeight = w; bestComm = comm; } });
+                    if (bestComm !== currentComm) { communities[i] = bestComm; improvement = true; }
+                }
+            }
+
+            const uniqueComms = Array.from(new Set(communities));
+            const commToClusterId = new Map(uniqueComms.map((c, idx) => [c, idx + 1]));
+
+            nodeIds.forEach((id, idx) => {
+                const cId = commToClusterId.get(communities[idx]);
+                const baseNode = baseGraph.nodes.get(id);
+                if (baseNode) baseNode.cluster = `Cluster ${cId}`;
+            });
+
+            isClustered = true;
+            runClusteringBtn.disabled = true;
+            clusterFilterSelect.disabled = false;
+
+            const clustersSet = new Set();
+            baseGraph.nodes.forEach(n => { if(n.cluster !== 'Unclustered') clustersSet.add(n.cluster); });
+            
+            clusterFilterSelect.innerHTML = '<option value="All">All Active Network</option>';
+            Array.from(clustersSet).sort((a,b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1])).forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.innerText = c;
+                clusterFilterSelect.appendChild(opt);
+            });
+
+            completedClusterNarratives = {};
+            updatePipelineDisplay();
+            processPipeline(false);
+        }
+
+        function updatePipelineDisplay() {
+            const count = Object.keys(completedClusterNarratives).length;
+            pipelineStatusIndicator.innerText = `Status: ${count} Cluster Narratives Cached`;
+            runMacroSynthesisBtn.disabled = count === 0;
+        }
+
+        function buildCentralityReportTableOnly() {
+            tableBody.innerHTML = "";
+            const currentFilter = clusterFilterSelect.value;
+            
+            let targetNodes = Array.from(activeGraph.nodes.values());
+            if (currentFilter !== 'All') {
+                targetNodes = targetNodes.filter(n => n.cluster === currentFilter);
+            }
+            
+            const sortedNodes = targetNodes.sort((a, b) => b.centrality - a.centrality);
+            const topN = parseInt(topNInput.value) || 5;
+            currentTableData = sortedNodes.slice(0, topN);
+
+            currentTableData.forEach(node => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition text-gray-600 border-b border-gray-100";
+                
+                // MODIFICATION: Clickable underline link wrapper added around the title field
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-gray-900 break-words align-top">${node.authors}</td>
+                    <td class="px-6 py-4 align-top">${node.year}</td>
+                    <td class="px-6 py-4 break-words whitespace-normal align-top font-medium text-blue-600 underline decoration-blue-400/40 hover:text-blue-800 hover:decoration-blue-700 cursor-pointer transition select-none" onclick="generateAndLaunchBibtexInspectorPopup('${node.id.replace(/'/g, "\\'")}')">${node.title}</td>
+                    <td class="px-6 py-4 break-words whitespace-normal text-xs text-justify align-top leading-relaxed">${node.abstract || 'N/A'}</td>
+                    <td class="px-6 py-4 break-words text-xs text-blue-800/80 align-top">${node.keywords || 'N/A'}</td>
+                    <td class="px-6 py-4 font-mono font-semibold text-blue-600 align-top">${node.centrality.toFixed(5)}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            if (completedClusterNarratives[currentFilter]) {
+                thematicParagraphOutput.innerHTML = completedClusterNarratives[currentFilter].html;
+            } else {
+                thematicParagraphOutput.innerHTML = `<p class="italic text-gray-400">Click "⚡ Show & Synthesize with AI" to pass these complete un-truncated abstracts to your selected AI provider endpoint.</p>`;
+            }
+        }
+
+        // NEW MODULAR ENGINE ROUTINE: AUTOMATED BIBTEX COMPILER MATRIX
+        function generateAndLaunchBibtexInspectorPopup(nodeId) {
+            const targetNode = baseGraph.nodes.get(nodeId);
+            if (!targetNode) return;
+
+            // Generate a clean citekey standard handle (FirstAuthorYearTitleKeyword)
+            const standardCiteKey = targetNode.id.replace(/[^a-zA-Z0-9]/g, '');
+            
+            // Format standard BibTeX fields cleanly
+            let bibtexString = `@article{${standardCiteKey},\n`;
+            bibtexString += `  author  = {${targetNode.authors.replace(/\s*,\s*/g, ' and ')}},\n`;
+            bibtexString += `  title   = {${targetNode.title}},\n`;
+            bibtexString += `  journal = {${targetNode.sourceJournal}},\n`;
+            bibtexString += `  year    = {${targetNode.year}}`;
+            
+            if (targetNode.sourceVolume) bibtexString += `,\n  volume  = {${targetNode.sourceVolume}}`;
+            if (targetNode.sourcePage)   bibtexString += `,\n  pages   = {${targetNode.sourcePage}}`;
+            if (targetNode.keywords)     bibtexString += `,\n  keywords= {${targetNode.keywords}}`;
+            
+            bibtexString += `\n}`;
+
+            // Populate preview loop panel container and display modal framework
+            bibtexOutputContainer.innerText = bibtexString;
+            bibtexInspectorModal.classList.remove('hidden');
+        }
+
+        function copyBibtexBlockContentToClipboard() {
+            const textToCopy = bibtexOutputContainer.innerText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const fallbackText = copyBibtexActionBtn.innerText;
+                copyBibtexActionBtn.innerText = "✓ Copied!";
+                copyBibtexActionBtn.classList.replace('bg-amber-600', 'bg-emerald-600');
+                setTimeout(() => {
+                    copyBibtexActionBtn.innerText = fallbackText;
+                    copyBibtexActionBtn.classList.replace('bg-emerald-600', 'bg-amber-600');
+                }, 1500);
+            }).catch(err => {
+                console.error("Clipboard capture fault intercept: ", err);
+            });
+        }
+
+        function handleEdgeSingleClickInspector(edgeObj) {
+            const srcNode = baseGraph.nodes.get(edgeObj.source);
+            const tgtNode = baseGraph.nodes.get(edgeObj.target);
+            if (!srcNode || !tgtNode) return;
+
+            kwdModalNetworkRelation.innerText = `${edgeObj.source} ⟷ ${edgeObj.target}`;
+            kwdModalListContainer.innerHTML = "";
+
+            const splitRegex = /\s*;\s*|\s*,\s*/;
+            const srcTokens = srcNode.keywords ? srcNode.keywords.toLowerCase().split(splitRegex).map(k => k.trim()).filter(Boolean) : [];
+            const tgtTokens = tgtNode.keywords ? tgtNode.keywords.toLowerCase().split(splitRegex).map(k => k.trim()).filter(Boolean) : [];
+
+            const srcSet = new Set(srcTokens);
+            const sharedKwds = tgtTokens.filter(kwd => srcSet.has(kwd));
+            const uniqueSharedKwds = Array.from(new Set(sharedKwds));
+
+            kwdModalSharedCount.innerText = uniqueSharedKwds.length;
+
+            if (uniqueSharedKwds.length > 0) {
+                uniqueSharedKwds.forEach(kwd => {
+                    const badge = document.createElement('span');
+                    badge.className = "bg-blue-50 text-blue-700 font-medium px-2.5 py-1 text-xs border border-blue-200 rounded-md shadow-xs capitalize";
+                    badge.innerText = kwd;
+                    kwdModalListContainer.appendChild(badge);
+                });
+            } else {
+                kwdModalListContainer.innerHTML = `<p class="text-xs text-gray-400 italic py-2">No matching Scopus indexed keywords overlap between these two connected articles.</p>`;
+            }
+
+            singleClickKwdModal.classList.remove('hidden');
+        }
+
+        function compileAndOpenClusterKeywordsMatrixPopup() {
+            const selectedCluster = clusterFilterSelect.value;
+            if (selectedCluster === 'All') return;
+
+            clusterKwdsTableBody.innerHTML = "";
+            clusterKwdsModalTitle.innerText = `Aggregated Keywords Intersections for ${selectedCluster}`;
+
+            const clusterNodes = Array.from(baseGraph.nodes.values()).filter(n => n.cluster === selectedCluster);
+            const splitRegex = /\s*;\s*|\s*,\s*/;
+            const kwdArticleCountMap = {};
+
+            clusterNodes.forEach(node => {
+                if (node.keywords) {
+                    const tokens = node.keywords.toLowerCase().split(splitRegex).map(k => k.trim()).filter(Boolean);
+                    const uniqueTokensInDoc = Array.from(new Set(tokens));
+                    uniqueTokensInDoc.forEach(token => {
+                        kwdArticleCountMap[token] = (kwdArticleCountMap[token] || 0) + 1;
+                    });
+                }
+            });
+
+            globalAggregatedKwdsCache = Object.keys(kwdArticleCountMap).map(k => {
+                return { keyword: k, count: kwdArticleCountMap[k] };
+            }).sort((a, b) => b.count - a.count);
+
+            if (globalAggregatedKwdsCache.length === 0) {
+                clusterKwdsTableBody.innerHTML = `<tr><td colspan="2" class="px-6 py-4 text-center italic text-gray-400">No indexing keyword fields are present in this community tracker.</td></tr>`;
+            } else {
+                globalAggregatedKwdsCache.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-gray-50 border-b border-gray-100 transition";
+                    row.innerHTML = `
+                        <td class="px-6 py-3 font-medium capitalize">${item.keyword}</td>
+                        <td class="px-6 py-3 text-center font-mono font-bold text-emerald-600">${item.count}</td>
+                    `;
+                    clusterKwdsTableBody.appendChild(row);
+                });
+            }
+
+            clusterKwdsModal.classList.remove('hidden');
+        }
+
+        function downloadClusterKeywordsMatrixToCSV() {
+            if (globalAggregatedKwdsCache.length === 0) return;
+
+            const selectedCluster = clusterFilterSelect.value;
+            const filename = `Shared_Keywords_of_${selectedCluster.replace(/\s+/g, '_')}.csv`;
+
+            const headers = ["Keyword", "Shared by"];
+            const csvRows = globalAggregatedKwdsCache.map(item => [`"${item.keyword.replace(/"/g, '""')}"`, item.count].join(","));
+            const csvContent = [headers.join(","), ...csvRows].join("\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url; link.setAttribute("download", filename);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function compileAndOpenClusterReferencesMatrixPopup() {
+            const selectedCluster = clusterFilterSelect.value;
+            if (selectedCluster === 'All') return;
+
+            clusterRefsTableBody.innerHTML = "";
+            clusterRefsModalTitle.innerText = `Aggregated Bibliography Intersections for ${selectedCluster}`;
+
+            const clusterEdges = activeGraph.edges.filter(e => {
+                const srcNode = activeGraph.nodes.get(e.source);
+                const tgtNode = activeGraph.nodes.get(e.target);
+                return srcNode && tgtNode && srcNode.cluster === selectedCluster && tgtNode.cluster === selectedCluster;
+            });
+
+            const refFrequencyMap = {};
+            clusterEdges.forEach(edge => {
+                if (edge.sharedRefs && edge.sharedRefs.length > 0) {
+                    edge.sharedRefs.forEach(ref => {
+                        refFrequencyMap[ref] = (refFrequencyMap[ref] || 0) + 1;
+                    });
+                }
+            });
+
+            globalAggregatedRefsCache = Object.keys(refFrequencyMap).map(ref => {
+                return { reference: ref, count: refFrequencyMap[ref] };
+            }).sort((a, b) => b.count - a.count);
+
+            if (globalAggregatedRefsCache.length === 0) {
+                clusterRefsTableBody.innerHTML = `<tr><td colspan="2" class="px-6 py-4 text-center italic text-gray-400">No cross-cutting references are shared inside this community.</td></tr>`;
+            } else {
+                globalAggregatedRefsCache.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-gray-50 border-b border-gray-100 transition";
+                    row.innerHTML = `
+                        <td class="px-6 py-3 break-words whitespace-normal text-justify pr-10">${item.reference}</td>
+                        <td class="px-6 py-3 text-center font-mono font-bold text-blue-600">${item.count}</td>
+                    `;
+                    clusterRefsTableBody.appendChild(row);
+                });
+            }
+
+            clusterRefsModal.classList.remove('hidden');
+        }
+
+        function downloadClusterReferencesMatrixToCSV() {
+            if (globalAggregatedRefsCache.length === 0) return;
+            const selectedCluster = clusterFilterSelect.value;
+            const filename = `Shared_References_of_${selectedCluster.replace(/\s+/g, '_')}.csv`;
+            const headers = ["Reference", "Shared by"];
+            const csvRows = globalAggregatedRefsCache.map(item => [`"${item.reference.replace(/"/g, '""')}"`, item.count].join(","));
+            const csvString = [headers.join(","), ...csvRows].join("\n");
+            const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url; link.setAttribute("download", filename);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+        }
+
+        function extractSalientTokens(nodesArray) {
+            const stopWords = new Set(['the', 'and', 'of', 'in', 'to', 'a', 'is', 'for', 'on', 'with', 'as', 'by', 'an', 'at', 'this', 'that', 'from', 'it', 'are', 'was', 'be', 'or', 'study', 'research', 'analysis', 'paper', 'results', 'data', 'using', 'based', 'between', 'their', 'its']);
+            const counts = {};
+            nodesArray.forEach(n => {
+                const text = `${n.title} ${n.abstract} ${n.keywords}`.toLowerCase().replace(/[^a-z\s]/g, '');
+                text.split(/\s+/).forEach(word => {
+                    if (word.length > 3 && !stopWords.has(word)) { counts[word] = (counts[word] || 0) + 1; }
+                });
+            });
+            return Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+        }
+
+        async function callAIProvider(promptText) {
+            const provider = aiProviderSelect.value;
+            const apiKey = aiApiKeyInput.value.trim();
+            if (provider === 'gemini') {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                });
+                if (!response.ok) throw new Error(`Gemini Error: ${response.status}`);
+                const data = await response.json(); return data.candidates[0].content.parts[0].text;
+            } else {
+                const response = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: promptText }], temperature: 0.2 })
+                });
+                if (!response.ok) throw new Error(`Groq Error: ${response.status}`);
+                const data = await response.json(); return data.choices[0].message.content;
+            }
+        }
+
+        async function generateThematicParagraphAI() {
+            buildCentralityReportTableOnly();
+            const clusterName = clusterFilterSelect.value;
+            if (clusterName === 'All' || currentTableData.length === 0) {
+                alert("Please select a specific single cluster from the sidebar menu first."); return;
+            }
+            const apiKey = aiApiKeyInput.value.trim();
+
+            apaCitationsOutput.innerHTML = "";
+            currentTableData.forEach(node => {
+                let cleanAuthors = node.authors;
+                if (cleanAuthors.split(',').length > 3) cleanAuthors = cleanAuthors.split(',')[0].trim() + " et al.";
+                const li = document.createElement('li');
+                li.className = "py-1 border-b border-gray-200/50 last:border-0";
+                li.innerHTML = `• ${cleanAuthors} (${node.year}). ${node.title}. <i>Scopus Matrix Element Vector</i>.`;
+                apaCitationsOutput.appendChild(li);
+            });
+
+            if (!apiKey) {
+                const tokens = extractSalientTokens(currentTableData);
+                const localHTML = `<p class="italic text-gray-500">[Local Fallback Heuristics] Cluster keywords: <b>${tokens.slice(0,5).join(', ')}</b>. Central citation belongs to ${currentTableData[0]?.id || 'N/A'}. Connect an API Key in the sidebar controls for advanced language generation.</p>`;
+                thematicParagraphOutput.innerHTML = localHTML;
+                completedClusterNarratives[clusterName] = { name: clusterName, html: localHTML, keywords: tokens.slice(0, 4) };
+                updatePipelineDisplay(); return;
+            }
+
+            thematicParagraphOutput.innerHTML = `<div class="flex items-center gap-2 text-amber-600"><span class="animate-spin text-lg">⏳</span> Dispatching matrices to ${aiProviderSelect.value.toUpperCase()}...</div>`;
+
+            const promptText = `You are an elite academic literature synthesist. Analyze these research items belonging to "${clusterName}":
+\n\n${currentTableData.map((n, i) => `[Vector ${i+1}] Cite ID: ${n.id}\nTitle: ${n.title}\nKeywords: ${n.keywords}\nAbstract: ${n.abstract}`).join('\n\n')}
+\n\nTask: Synthesize these papers into a cohesive, rigorous academic literature review paragraph. Distill their shared theoretical frameworks, core paradigms, underlying methodologies, and empirical intersections. Integrate standard narrative citations naturally using their exact assigned Cite ID values (e.g., Author (Year) or (Author, Year)).
+\n\nConstraint Metrics: Do not print markdown structural titles, tags or bullet markers. Output strictly one unified, dense academic narrative paragraph formatted in clean HTML text.`;
+
+            try {
+                const textResult = await callAIProvider(promptText);
+                thematicParagraphOutput.innerHTML = textResult;
+                completedClusterNarratives[clusterName] = { name: clusterName, html: textResult, keywords: extractSalientTokens(currentTableData).slice(0, 4) };
+                updatePipelineDisplay();
+            } catch (err) {
+                thematicParagraphOutput.innerHTML = `<div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-xs font-mono"><b>Pipeline Connection Failure:</b><br>${err.message}</div>`;
+            }
+        }
+
+        async function executeGlobalComparativeSynthesisAI() {
+            const apiKey = aiApiKeyInput.value.trim();
+            const registryItems = Object.values(completedClusterNarratives);
+            if (registryItems.length === 0) return;
+
+            if (!apiKey) {
+                let fallbackHTML = `<p class="text-slate-400 italic">[Local Fallback] Cross-cluster architecture built using local summary frames:</p><div class="space-y-2 mt-2">`;
+                registryItems.forEach(item => { fallbackHTML += `<div class="bg-slate-900 border border-slate-800 p-2 text-xs rounded"><b>${item.name}:</b> Core keyword intersections mapped at [<i>${item.keywords.join(', ')}</i>].</div>`; });
+                fallbackHTML += `</div>`; comparativeSynthesisOutput.innerHTML = fallbackHTML; return;
+            }
+
+            comparativeSynthesisOutput.innerHTML = `<div class="flex items-center gap-2 text-amber-400"><span class="animate-spin text-lg">⏳</span> Executing macro structural domain synthesis via ${aiProviderSelect.value.toUpperCase()}...</div>`;
+
+            const promptText = `You are an advanced bibliometric metadata modeling engineer constructing academic macro architectures.
+Review the following narrative profiles compiled from individual clusters discovered inside a bibliographic coupling network layout:
+\n\n${JSON.stringify(registryItems, null, 2)}
+\n\nTasks:
+1. Perform a rigorous comparative analysis across all provided clusters. Identify structural conceptual overlaps, clear epistemological or theoretical boundaries, and inter-cluster cross-pollination patterns.
+2. Synthesize these active clusters into an overarching unified set of higher-level thematic categories or meta-domains that cleanly capture the complete, macro intellectual topography of this literature field.
+\n\nFormatting Matrix: Build your complete response using styled HTML blocks tailored perfectly for a dark background dashboard container. Represent the synthesized higher-level categories using distinct <div> container layouts with light gray left border accents (border-l-2) or muted background boxes for high visual contrast. Do not wrap output with markdown backticks (\`\`\`).`;
+
+            try {
+                const textResult = await callAIProvider(promptText); comparativeSynthesisOutput.innerHTML = textResult;
+            } catch (err) {
+                comparativeSynthesisOutput.innerHTML = `<div class="p-3 bg-rose-950/40 border border-rose-800 text-rose-300 rounded-md text-xs font-mono"><b>Macro Framework compilation failed:</b><br>${err.message}</div>`;
+            }
+        }
+
+        function renderNetworkVisuals() {
+            const container = document.getElementById('network-canvas');
+            const visNodes = []; const visEdges = []; const showWeights = showWeightsCheckbox.checked;
+
+            activeGraph.nodes.forEach((data, node) => {
+                let color = "#1f77b4";
+                if (isClustered && data.cluster !== "Unclustered") {
+                    const cNum = parseInt(data.cluster.split(' ')[1]) - 1; color = clusterColors[cNum % clusterColors.length];
+                }
+                const sizeFactor = 10 + (data.centrality * 40);
+                
+                const elementTooltip = document.createElement('div');
+                elementTooltip.className = "text-xs space-y-1 p-1 font-sans";
+                elementTooltip.innerHTML = `
+                    <div style="white-space: nowrap;"><b>Authors:</b> ${data.authors}</div>
+                    <div style="white-space: nowrap;"><b>Year:</b> ${data.year}</div>
+                    <div style="white-space: normal; max-width: 300px; margin-top: 2px; line-height: 1.2;"><b>Title:</b> ${data.title}</div>
+                `;
+
+                visNodes.push({ 
+                    id: node, 
+                    label: node, 
+                    title: elementTooltip, 
+                    color: color, 
+                    size: sizeFactor, 
+                    shape: 'dot' 
+                });
+            });
+
+            activeGraph.edges.forEach((d, index) => {
+                visEdges.push({ id: index, from: d.source, to: d.target, value: d.weight, label: showWeights ? String(d.weight) : "", color: { color: "#cccccc", hover: "#999999", highlight: "#2563eb" } });
+            });
+
+            if (networkInstance) networkInstance.destroy();
+            networkInstance = new vis.Network(container, { nodes: new vis.DataSet(visNodes), edges: new vis.DataSet(visEdges) }, {
+                physics: { enabled: true, barnesHut: { gravitationalConstant: -10000, centralGravity: 0.2, springLength: 140, springConstant: 0.04 }, stabilization: { enabled: true, iterations: 200 } },
+                interaction: { hover: true, tooltipDelay: 100, hoverConnectedEdges: true, selectable: true, selectConnectedEdges: false },
+                edges: { selectionWidth: 2, hoverWidth: 2 }
+            });
+
+            networkInstance.on("stabilizationIterationsDone", function () { networkInstance.setOptions({ physics: { enabled: false } }); });
+
+            networkInstance.on("click", function (params) {
+                if (params.edges.length > 0 && params.nodes.length === 0) {
+                    const edgeId = params.edges[0]; const edgeData = activeGraph.edges[edgeId];
+                    if (edgeData) {
+                        setTimeout(() => {
+                            if (!singleClickKwdModal.classList.contains('hidden') || !refsModal.classList.contains('hidden')) return;
+                            handleEdgeSingleClickInspector(edgeData);
+                        }, 180);
+                    }
+                }
+            });
+
+            networkInstance.on("doubleClick", function (params) {
+                if (params.edges.length > 0 && params.nodes.length === 0) {
+                    singleClickKwdModal.classList.add('hidden'); 
+                    const edgeId = params.edges[0]; const edgeData = activeGraph.edges[edgeId];
+                    if (edgeData) showReferencesModal(edgeData.source, edgeData.target, edgeData.sharedRefs);
+                }
+            });
+        }
+
+        function showReferencesModal(source, target, sharedRefsArray) {
+            modalRelationText.innerText = `${source} ⟷ ${target}`; modalSharedCount.innerText = sharedRefsArray ? sharedRefsArray.length : 0;
+            modalReferencesList.innerHTML = "";
+            if (sharedRefsArray && sharedRefsArray.length > 0) {
+                sharedRefsArray.forEach(refText => {
+                    const li = document.createElement("li"); li.className = "bg-slate-50 border border-slate-100 p-1.5 rounded text-justify text-xs break-words font-sans"; li.innerText = refText; modalReferencesList.appendChild(li);
+                });
+            } else { modalReferencesList.innerHTML = `<p class="text-gray-400 italic">No shared references recorded.</p>`; }
+            refsModal.classList.remove('hidden');
+        }
+
+        function hideModalOverlay() { refsModal.classList.add('hidden'); }
+
+        function saveTableToCsvFile() {
+            if (currentTableData.length === 0) return;
+            const headers = ["Authors", "Year", "Title", "Abstract", "Keywords", "Normalized Centrality"];
+            const csvRows = currentTableData.map(node => [`"${node.authors.replace(/"/g, '""')}"`, node.year, `"${node.title.replace(/"/g, '""')}"`, `"${(node.abstract || '').replace(/"/g, '""')}"`, `"${(node.keywords || '').replace(/"/g, '""')}"`, node.centrality.toFixed(5)].join(","));
+            const blob = new Blob([[headers.join(","), ...csvRows].join("\n")], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.setAttribute("download", `top_centrality_records_${clusterFilterSelect.value.toLowerCase().replace(/\s+/g, '_')}.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+        }
+
+        exportGmlBtn.addEventListener('click', () => {
+            let gmlString = "graph [\n  directed 0\n";
+            activeGraph.nodes.forEach((data, id) => { gmlString += `  node [\n    id "${id}"\n    label "${id}"\n    authors "${data.authors}"\n    year ${data.year}\n    title "${data.title}"\n    keywords "${(data.keywords || '').replace(/"/g, '""')}"\n    cluster "${data.cluster}"\n  ]\n`; });
+            activeGraph.edges.forEach(e => { gmlString += `  edge [\n    source "${e.source}"\n    target "${e.target}"\n    weight ${e.weight}\n  ]\n`; });
+            const blob = new Blob([gmlString + "]"], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = "bibliographic_coupling_network.gml"; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
