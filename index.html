@@ -128,7 +128,7 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         /* Modal Styles */
-        #modal-overlay {
+        #modal-overlay, #node-modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.5);
@@ -137,7 +137,10 @@
             align-items: center;
             z-index: 1000;
         }
-        #modal-content {
+        #node-modal-overlay {
+            z-index: 1100;
+        }
+        #modal-content, #node-modal-content {
             background: #fff;
             width: 600px;
             max-height: 80vh;
@@ -195,12 +198,22 @@
             padding: 10px 15px;
             border-bottom: 1px solid #f1f5f9;
         }
+        .node-link {
+            color: #2563eb;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .node-link:hover {
+            text-decoration: underline;
+        }
         .modal-footer {
             padding: 12px 20px;
             background: #f8fafc;
             border-top: 1px solid #e2e8f0;
             display: flex;
             justify-content: flex-end;
+            gap: 10px;
         }
         #drop-zone {
             position: absolute;
@@ -285,6 +298,22 @@
         </div>
     </div>
 
+    <!-- Modal for Node Details -->
+    <div id="node-modal-overlay">
+        <div id="node-modal-content">
+            <div class="modal-header">
+                <h3 id="node-modal-title">Node Details</h3>
+                <button class="close-modal" id="closeNodeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body" id="node-modal-body" style="padding: 20px; font-size: 0.95rem; line-height: 1.5;">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button id="closeNodeDetailsBtn" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let rawData = { nodes: [], edges: [] };
         let simulation = null;
@@ -338,15 +367,18 @@
                 let idMatch = content.match(/id\s+(\d+)/);
                 let labelMatch = content.match(/label\s+"([^"]*)"/);
                 let clusterMatch = content.match(/cluster\s+(\d+)/);
-                // Corrected regex to match weight<citations> or standard weight attributes
                 let weightMatch = content.match(/\bweight(?:<[^>]+>)?\s+([0-9\.eE+-]+)/);
+                let descMatch = content.match(/description\s+"([^"]*)"/);
+                let urlMatch = content.match(/url\s+"([^"]*)"/);
                 
                 if (idMatch) {
                     nodes.push({
                         id: +idMatch[1],
                         label: labelMatch ? labelMatch[1] : `Node ${idMatch[1]}`,
                         cluster: clusterMatch ? +clusterMatch[1] : 1,
-                        weight: weightMatch ? +weightMatch[1] : 1
+                        weight: weightMatch ? +weightMatch[1] : 1,
+                        description: descMatch ? descMatch[1] : "",
+                        url: urlMatch ? urlMatch[1] : ""
                     });
                 }
             }
@@ -549,7 +581,6 @@
                 }));
             }
 
-            // Compute visible metrics for sizing if required
             const visibleLinksMap = new Map();
             const visibleWeightMap = new Map();
             nodes.forEach(n => {
@@ -700,6 +731,7 @@
                 });
 
                 return {
+                    nodeId: node.id,
                     node: node.label,
                     links: linksCount,
                     weight: totalWeight
@@ -725,7 +757,7 @@
             tbody.innerHTML = "";
             currentTableData.forEach(row => {
                 const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${escapeHtml(row.node)}</td><td>${row.links}</td><td>${row.weight.toFixed(2)}</td>`;
+                tr.innerHTML = `<td><a href="#" class="node-link" data-id="${row.nodeId}">${escapeHtml(row.node)}</a></td><td>${row.links}</td><td>${row.weight.toFixed(2)}</td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -742,6 +774,78 @@
                 sortAndRenderTable();
             });
         });
+
+        // Node Detail Modal Logic
+        const nodeModalOverlay = document.getElementById("node-modal-overlay");
+        const closeNodeModalBtn = document.getElementById("closeNodeModalBtn");
+        const closeNodeDetailsBtn = document.getElementById("closeNodeDetailsBtn");
+
+        closeNodeModalBtn.addEventListener("click", () => {
+            nodeModalOverlay.style.display = "none";
+        });
+        closeNodeDetailsBtn.addEventListener("click", () => {
+            nodeModalOverlay.style.display = "none";
+        });
+        window.addEventListener("click", (e) => {
+            if (e.target === nodeModalOverlay) nodeModalOverlay.style.display = "none";
+        });
+
+        document.getElementById("metricsTableBody").addEventListener("click", (e) => {
+            if (e.target.classList.contains("node-link")) {
+                e.preventDefault();
+                const nodeId = +e.target.getAttribute("data-id");
+                showNodeDetails(nodeId);
+            }
+        });
+
+        function showNodeDetails(nodeId) {
+            const nodeMap = new Map(rawData.nodes.map(n => [n.id, n]));
+            const node = nodeMap.get(nodeId);
+            if (!node) return;
+
+            document.getElementById("node-modal-title").textContent = node.label;
+            const bodyEl = document.getElementById("node-modal-body");
+
+            let htmlContent = "";
+            if (node.description) {
+                htmlContent += `<div class="node-desc-container">${node.description}</div>`;
+            } else {
+                htmlContent += `<p>No description available for this node.</p>`;
+            }
+
+            if (node.url) {
+                htmlContent += `<div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 0.9rem;">
+                    <strong>URL:</strong> <a href="${node.url}" target="_blank" style="color: #2563eb; text-decoration: none;">${node.url}</a>
+                </div>`;
+            }
+
+            bodyEl.innerHTML = htmlContent;
+
+            // Clean up and style the injected description table
+            const table = bodyEl.querySelector('table');
+            if (table) {
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+                table.querySelectorAll('tr').forEach(tr => {
+                    const tds = tr.querySelectorAll('td');
+                    if (tds.length >= 2) {
+                        tds[0].style.fontWeight = '600';
+                        tds[0].style.padding = '8px 12px';
+                        tds[0].style.width = '25%';
+                        tds[0].style.verticalAlign = 'top';
+                        tds[0].style.color = '#475569';
+                        tds[0].style.textTransform = 'capitalize';
+
+                        tds[1].style.padding = '8px 12px';
+                        tds[1].style.verticalAlign = 'top';
+                        tds[1].style.color = '#1e293b';
+                    }
+                    tr.style.borderBottom = '1px solid #f1f5f9';
+                });
+            }
+
+            nodeModalOverlay.style.display = "flex";
+        }
 
         saveCsvBtn.addEventListener("click", () => {
             const selectedCluster = document.getElementById('clusterSelect').value;
