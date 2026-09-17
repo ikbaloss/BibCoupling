@@ -88,6 +88,7 @@
         .link {
             stroke: #94a3b8;
             stroke-opacity: 0.7;
+            cursor: pointer;
         }
         .node {
             stroke: #fff;
@@ -553,7 +554,7 @@
             });
         }
 
-        // 2. Render Item-Level Network with Sizing Options
+        // 2. Render Item-Level Network with Sizing & Focusing Options
         function renderItemNetwork(container, width, height, selectedCluster) {
             const nodeMap = new Map(rawData.nodes.map(n => [n.id, n]));
             const sizeMode = document.getElementById('nodeSizeSelect').value;
@@ -658,6 +659,73 @@
                     .attr("dy", d => getNodeRadius(d) + 10)
                     .text(d => d.label);
             }
+
+            // Highlighting interaction state & logic
+            let selectedNodeId = null;
+            let selectedLinkData = null;
+
+            function updateFocusState() {
+                if (selectedNodeId === null && selectedLinkData === null) {
+                    nodeSelection.style("opacity", 1);
+                    linkSelection.style("opacity", 1);
+                    return;
+                }
+
+                let activeNodeIds = new Set();
+                let activeLinks = new Set();
+
+                if (selectedNodeId !== null) {
+                    activeNodeIds.add(selectedNodeId);
+                    links.forEach(l => {
+                        let sId = l.source.id !== undefined ? l.source.id : l.source;
+                        let tId = l.target.id !== undefined ? l.target.id : l.target;
+                        if (sId === selectedNodeId) {
+                            activeNodeIds.add(tId);
+                            activeLinks.add(l);
+                        } else if (tId === selectedNodeId) {
+                            activeNodeIds.add(sId);
+                            activeLinks.add(l);
+                        }
+                    });
+                } else if (selectedLinkData !== null) {
+                    let sId = selectedLinkData.source.id !== undefined ? selectedLinkData.source.id : selectedLinkData.source;
+                    let tId = selectedLinkData.target.id !== undefined ? selectedLinkData.target.id : selectedLinkData.target;
+                    activeNodeIds.add(sId);
+                    activeNodeIds.add(tId);
+                    activeLinks.add(selectedLinkData);
+                }
+
+                nodeSelection.style("opacity", d => activeNodeIds.has(d.id) ? 1 : 0.15);
+                linkSelection.style("opacity", d => activeLinks.has(d) ? 1 : 0.1);
+            }
+
+            nodeSelection.on("click", (event, d) => {
+                event.stopPropagation();
+                if (selectedNodeId === d.id) {
+                    selectedNodeId = null;
+                } else {
+                    selectedNodeId = d.id;
+                    selectedLinkData = null;
+                }
+                updateFocusState();
+            });
+
+            linkSelection.on("click", (event, d) => {
+                event.stopPropagation();
+                if (selectedLinkData === d) {
+                    selectedLinkData = null;
+                } else {
+                    selectedLinkData = d;
+                    selectedNodeId = null;
+                }
+                updateFocusState();
+            });
+
+            svg.on("click", () => {
+                selectedNodeId = null;
+                selectedLinkData = null;
+                updateFocusState();
+            });
 
             nodeSelection.on("mouseover", (event, d) => {
                 let vLinks = visibleLinksMap.get(d.id) || 0;
@@ -821,7 +889,6 @@
 
             bodyEl.innerHTML = htmlContent;
 
-            // Clean up and style the injected description table
             const table = bodyEl.querySelector('table');
             if (table) {
                 table.style.width = '100%';
