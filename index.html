@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOSviewer Cluster Explorer, Conflator & Sizing</title>
+    <title>VOSviewer Cluster Explorer with Scopus CSV</title>
     <!-- Load D3.js v7 -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
@@ -13,14 +13,14 @@
             padding: 0;
             background-color: #f4f7f6;
             color: #333;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            height: 100vh;
         }
         header {
             background-color: #2c3e50;
             color: white;
-            padding: 12px 20px;
+            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -34,18 +34,24 @@
         }
         .controls {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
             flex-wrap: wrap;
         }
+        .file-input-group {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+        }
         .controls input[type="file"], .controls select {
             background: #34495e;
-            padding: 6px 10px;
+            padding: 5px 8px;
             border-radius: 4px;
             border: 1px solid #4e6d8d;
             color: white;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
         .controls select option {
             background: #2c3e50;
@@ -58,7 +64,7 @@
             background: #34495e;
             padding: 5px 10px;
             border-radius: 4px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             border: 1px solid #4e6d8d;
         }
         button.action-btn {
@@ -69,16 +75,29 @@
             border-radius: 4px;
             cursor: pointer;
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
         button.action-btn:hover {
             background: #2563eb;
         }
+        button.action-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
         main {
             flex: 1;
             position: relative;
-            overflow: hidden;
             display: flex;
+            flex-direction: column;
+            padding-bottom: 40px;
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 75vh;
+            min-height: 550px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
         }
         svg {
             width: 100%;
@@ -124,9 +143,79 @@
             font-size: 12px;
             pointer-events: none;
             display: none;
-            z-index: 10;
+            z-index: 50;
             max-width: 250px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        /* Bottom Cluster Table Section */
+        #cluster-table-container {
+            margin: 20px auto;
+            width: 95%;
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .table-header-bar {
+            padding: 12px 20px;
+            background: #f1f5f9;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-scroll-area {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        table.cluster-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+            table-layout: fixed;
+        }
+        table.cluster-data-table th {
+            background: #f8fafc;
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 2px solid #cbd5e1;
+            user-select: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            color: #334155;
+        }
+        table.cluster-data-table th:hover {
+            background: #e2e8f0;
+        }
+        table.cluster-data-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #1e293b;
+            white-space: normal;
+            word-wrap: break-word;
+            word-break: break-word;
+            vertical-align: top;
+        }
+        /* Custom column widths to accommodate wrapped content */
+        table.cluster-data-table th:nth-child(1), table.cluster-data-table td:nth-child(1) { width: 14%; } /* Authors */
+        table.cluster-data-table th:nth-child(2), table.cluster-data-table td:nth-child(2) { width: 6%; }  /* Year */
+        table.cluster-data-table th:nth-child(3), table.cluster-data-table td:nth-child(3) { width: 22%; } /* Title */
+        table.cluster-data-table th:nth-child(4), table.cluster-data-table td:nth-child(4) { width: 30%; } /* Abstract */
+        table.cluster-data-table th:nth-child(5), table.cluster-data-table td:nth-child(5) { width: 14%; } /* Keywords */
+        table.cluster-data-table th:nth-child(6), table.cluster-data-table td:nth-child(6) { width: 7%; }  /* Links */
+        table.cluster-data-table th:nth-child(7), table.cluster-data-table td:nth-child(7) { width: 7%; }  /* Weight */
+
+        .sort-indicator {
+            font-size: 0.75rem;
+            margin-left: 4px;
+            color: #64748b;
         }
         /* Modal Styles */
         #modal-overlay, #node-modal-overlay {
@@ -143,8 +232,8 @@
         }
         #modal-content, #node-modal-content {
             background: #fff;
-            width: 600px;
-            max-height: 80vh;
+            width: 700px;
+            max-height: 85vh;
             border-radius: 8px;
             display: flex;
             flex-direction: column;
@@ -213,7 +302,8 @@
             background: #f8fafc;
             border-top: 1px solid #e2e8f0;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
             gap: 10px;
         }
         #drop-zone {
@@ -233,6 +323,20 @@
         #drop-zone.hidden {
             display: none;
         }
+        .bibtex-box {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 15px;
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -240,15 +344,22 @@
     <header>
         <h1>VOSviewer Cluster Explorer</h1>
         <div class="controls">
-            <input type="file" id="gmlFile" accept=".gml">
+            <div class="file-input-group">
+                <label for="gmlFile">VOSviewer GML File:</label>
+                <input type="file" id="gmlFile" accept=".gml">
+            </div>
+            <div class="file-input-group">
+                <label for="csvFile">Scopus CSV File (Optional):</label>
+                <input type="file" id="csvFile" accept=".csv" disabled>
+            </div>
             <div class="toggle-container">
                 <label for="conflateToggle"><input type="checkbox" id="conflateToggle" disabled> Conflate Clusters</label>
             </div>
-            <label for="clusterSelect" style="font-size: 0.9rem;">Cluster Filter:</label>
+            <label for="clusterSelect" style="font-size: 0.85rem;">Cluster Filter:</label>
             <select id="clusterSelect" disabled>
                 <option value="All">All Clusters</option>
             </select>
-            <label for="nodeSizeSelect" style="font-size: 0.9rem;">Node Size:</label>
+            <label for="nodeSizeSelect" style="font-size: 0.85rem;">Node Size:</label>
             <select id="nodeSizeSelect" disabled>
                 <option value="equal">Equal Size</option>
                 <option value="citation" selected>Citation Weight</option>
@@ -261,15 +372,47 @@
 
     <main>
         <div id="drop-zone">
-            <h2>Drag & Drop your VOSviewer GML file here</h2>
-            <p>or use the file picker in the top right header</p>
+            <h2>Drag & Drop your VOSviewer GML file (and optional Scopus CSV) here</h2>
+            <p>or use the file pickers in the top header</p>
             <label class="action-btn" style="cursor: pointer;">
-                Browse File <input type="file" id="gmlFileBrowse" accept=".gml" style="display: none;">
+                Browse GML File <input type="file" id="gmlFileBrowse" accept=".gml" style="display: none;">
             </label>
         </div>
 
         <div id="tooltip"></div>
-        <svg id="network-canvas"></svg>
+        
+        <div class="canvas-container">
+            <svg id="network-canvas"></svg>
+        </div>
+
+        <!-- Bottom Table Container for Cluster Data (Scrollable below graph) -->
+        <div id="cluster-table-container">
+            <div class="table-header-bar">
+                <span id="clusterTableTitle">Cluster Table</span>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span style="font-size: 0.8rem; color: #64748b;">Showing articles captured in network</span>
+                    <button id="saveClusterCsvBtn" class="action-btn">Save to CSV</button>
+                </div>
+            </div>
+            <div class="table-scroll-area">
+                <table class="cluster-data-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="author">Authors <span class="sort-indicator" id="sort-author"></span></th>
+                            <th data-sort="year">Year <span class="sort-indicator" id="sort-year"></span></th>
+                            <th data-sort="title">Title <span class="sort-indicator" id="sort-title"></span></th>
+                            <th data-sort="abstract">Abstract <span class="sort-indicator" id="sort-abstract"></span></th>
+                            <th data-sort="keywords">Keywords <span class="sort-indicator" id="sort-keywords"></span></th>
+                            <th data-sort="links">Total Links <span class="sort-indicator" id="sort-links"></span></th>
+                            <th data-sort="weight">Total Weight <span class="sort-indicator" id="sort-weight"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="clusterTableBody">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </main>
 
     <!-- Modal for Metrics Table -->
@@ -293,7 +436,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="justify-content: flex-end;">
                 <button id="saveCsvBtn" class="action-btn">Save to CSV file</button>
             </div>
         </div>
@@ -310,25 +453,35 @@
                 <!-- Populated dynamically -->
             </div>
             <div class="modal-footer">
-                <button id="closeNodeDetailsBtn" class="action-btn">Close</button>
+                <button id="bibtexBtn" class="action-btn" style="background: #0d9488;">BibTeX</button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="closeNodeDetailsBtn" class="action-btn">Close</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         let rawData = { nodes: [], edges: [] };
+        let scopusDataMap = new Map();
         let simulation = null;
         let currentTableData = [];
         let currentSortColumn = 'node';
         let sortAscending = true;
+
+        let currentClusterTableData = [];
+        let clusterTableSortCol = 'author';
+        let clusterTableSortAsc = true;
+        let activeSelectedNodeId = null;
+
         const colorPalette = d3.schemeTableau10.concat(d3.schemeSet3);
 
-        // File handling logic
-        function handleFile(file) {
+        function handleGmlFile(file) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 parseGML(e.target.result);
                 document.getElementById('drop-zone').classList.add('hidden');
+                document.getElementById('csvFile').disabled = false;
                 document.getElementById('conflateToggle').disabled = false;
                 document.getElementById('clusterSelect').disabled = false;
                 document.getElementById('nodeSizeSelect').disabled = false;
@@ -340,11 +493,24 @@
             reader.readAsText(file);
         }
 
+        function handleCsvFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parseScopusCSV(e.target.result);
+                renderNetwork();
+                updateClusterTableVisibility();
+            };
+            reader.readAsText(file);
+        }
+
         document.getElementById('gmlFile').addEventListener('change', (e) => {
-            if (e.target.files[0]) handleFile(e.target.files[0]);
+            if (e.target.files[0]) handleGmlFile(e.target.files[0]);
         });
         document.getElementById('gmlFileBrowse').addEventListener('change', (e) => {
-            if (e.target.files[0]) handleFile(e.target.files[0]);
+            if (e.target.files[0]) handleGmlFile(e.target.files[0]);
+        });
+        document.getElementById('csvFile').addEventListener('change', (e) => {
+            if (e.target.files[0]) handleCsvFile(e.target.files[0]);
         });
 
         const dropZone = document.getElementById('drop-zone');
@@ -355,7 +521,16 @@
             dropZone.addEventListener(name, (e) => { e.preventDefault(); dropZone.style.borderColor = '#cbd5e1'; });
         });
         dropZone.addEventListener('drop', (e) => {
-            if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+            e.preventDefault();
+            if (e.dataTransfer.files.length > 0) {
+                for (let file of e.dataTransfer.files) {
+                    if (file.name.endsWith('.gml')) {
+                        handleGmlFile(file);
+                    } else if (file.name.endsWith('.csv')) {
+                        handleCsvFile(file);
+                    }
+                }
+            }
         });
 
         function parseGML(text) {
@@ -368,9 +543,27 @@
                 let idMatch = content.match(/id\s+(\d+)/);
                 let labelMatch = content.match(/label\s+"([^"]*)"/);
                 let clusterMatch = content.match(/cluster\s+(\d+)/);
-                let weightMatch = content.match(/\bweight(?:<[^>]+>)?\s+([0-9\.eE+-]+)/);
+                let weightMatch = content.match(/weight\s+([0-9\.eE+-]+)/);
                 let descMatch = content.match(/description\s+"([^"]*)"/);
                 let urlMatch = content.match(/url\s+"([^"]*)"/);
+
+                let parsedDesc = { authors: '', title: '', year: '', source: '', volume: '', issue: '' };
+                if (descMatch) {
+                    let descHtml = descMatch[1];
+                    let authorMatch = descHtml.match(/<td>Authors:<\/td>\s*<td>(.*?)<\/td>/i);
+                    let titleMatch = descHtml.match(/<td>Title:<\/td>\s*<td>(.*?)<\/td>/i);
+                    let yearMatch = descHtml.match(/<td>Year:<\/td>\s*<td>(.*?)<\/td>/i);
+                    let sourceMatch = descHtml.match(/<td>Source:<\/td>\s*<td>(.*?)<\/td>/i);
+                    let volMatch = descHtml.match(/<td>Volume:<\/td>\s*<td>(.*?)<\/td>/i);
+                    let issueMatch = descHtml.match(/<td>Issue:<\/td>\s*<td>(.*?)<\/td>/i);
+
+                    if (authorMatch) parsedDesc.authors = authorMatch[1].trim();
+                    if (titleMatch) parsedDesc.title = titleMatch[1].trim();
+                    if (yearMatch) parsedDesc.year = yearMatch[1].trim();
+                    if (sourceMatch) parsedDesc.source = sourceMatch[1].trim();
+                    if (volMatch) parsedDesc.volume = volMatch[1].trim();
+                    if (issueMatch) parsedDesc.issue = issueMatch[1].trim();
+                }
                 
                 if (idMatch) {
                     nodes.push({
@@ -379,7 +572,8 @@
                         cluster: clusterMatch ? +clusterMatch[1] : 1,
                         weight: weightMatch ? +weightMatch[1] : 1,
                         description: descMatch ? descMatch[1] : "",
-                        url: urlMatch ? urlMatch[1] : ""
+                        url: urlMatch ? urlMatch[1] : "",
+                        parsedDesc: parsedDesc
                     });
                 }
             }
@@ -402,6 +596,71 @@
             rawData = { nodes, edges };
         }
 
+        function parseCSVLine(text) {
+            let result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char === '"') {
+                    if (inQuotes && text[i+1] === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function parseScopusCSV(text) {
+            scopusDataMap.clear();
+            let lines = text.split(/\r\n|\n/);
+            if (lines.length < 2) return;
+
+            let headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+            
+            let authorIdx = headers.findIndex(h => h.includes('author') && !h.includes('keyword') && !h.includes('full'));
+            if (authorIdx === -1) authorIdx = headers.findIndex(h => h.includes('authors') || h.includes('author full names'));
+            let yearIdx = headers.findIndex(h => h === 'year' || h === 'publication year');
+            let titleIdx = headers.findIndex(h => h === 'title' || h === 'document title');
+            let absIdx = headers.findIndex(h => h === 'abstract');
+            let kwIdx = headers.findIndex(h => h.includes('keyword') || h.includes('author keywords') || h.includes('index keywords'));
+            let sourceIdx = headers.findIndex(h => h === 'source title' || h === 'journal' || h === 'publication name');
+            let volIdx = headers.findIndex(h => h === 'volume');
+            let issueIdx = headers.findIndex(h => h === 'issue');
+
+            let gmlTitles = new Set(rawData.nodes.map(n => (n.parsedDesc.title || n.label).toLowerCase().trim()));
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                let cols = parseCSVLine(lines[i]).map(c => c.replace(/^"|"$/g, '').trim());
+                
+                let title = titleIdx !== -1 ? cols[titleIdx] : '';
+                let normTitle = title.toLowerCase().trim();
+
+                if (normTitle && gmlTitles.has(normTitle)) {
+                    scopusDataMap.set(normTitle, {
+                        authors: authorIdx !== -1 ? cols[authorIdx] : 'N/A',
+                        year: yearIdx !== -1 ? cols[yearIdx] : 'N/A',
+                        title: title,
+                        abstract: absIdx !== -1 ? cols[absIdx] : 'N/A',
+                        keywords: kwIdx !== -1 ? cols[kwIdx] : 'N/A',
+                        source: sourceIdx !== -1 ? cols[sourceIdx] : 'N/A',
+                        volume: volIdx !== -1 ? cols[volIdx] : 'N/A',
+                        issue: issueIdx !== -1 ? cols[issueIdx] : 'N/A'
+                    });
+                }
+            }
+        }
+
         function populateClusterDropdown() {
             const select = document.getElementById('clusterSelect');
             select.innerHTML = '<option value="All">All Clusters</option>';
@@ -417,11 +676,32 @@
         document.getElementById('conflateToggle').addEventListener('change', () => {
             const isConflated = document.getElementById('conflateToggle').checked;
             document.getElementById('clusterSelect').disabled = isConflated;
+            if (isConflated) {
+                document.getElementById('cluster-table-container').style.display = 'none';
+            } else {
+                updateClusterTableVisibility();
+            }
             renderNetwork();
         });
 
-        document.getElementById('clusterSelect').addEventListener('change', () => renderNetwork());
+        document.getElementById('clusterSelect').addEventListener('change', () => {
+            updateClusterTableVisibility();
+            renderNetwork();
+        });
         document.getElementById('nodeSizeSelect').addEventListener('change', () => renderNetwork());
+
+        function updateClusterTableVisibility() {
+            const selectedCluster = document.getElementById('clusterSelect').value;
+            const isConflated = document.getElementById('conflateToggle').checked;
+            const tableContainer = document.getElementById('cluster-table-container');
+
+            if (!isConflated && selectedCluster !== "All") {
+                tableContainer.style.display = 'flex';
+                populateClusterTable(+selectedCluster);
+            } else {
+                tableContainer.style.display = 'none';
+            }
+        }
 
         const svg = d3.select("#network-canvas");
         const tooltip = d3.select("#tooltip");
@@ -452,7 +732,6 @@
             }
         }
 
-        // 1. Render Conflated Cluster Network
         function renderConflatedNetwork(container, width, height) {
             const clusterMap = new Map();
             rawData.nodes.forEach(n => {
@@ -554,7 +833,6 @@
             });
         }
 
-        // 2. Render Item-Level Network with Sizing & Focusing Options
         function renderItemNetwork(container, width, height, selectedCluster) {
             const nodeMap = new Map(rawData.nodes.map(n => [n.id, n]));
             const sizeMode = document.getElementById('nodeSizeSelect').value;
@@ -660,7 +938,6 @@
                     .text(d => d.label);
             }
 
-            // Highlighting interaction state & logic
             let selectedNodeId = null;
             let selectedLinkData = null;
 
@@ -754,11 +1031,102 @@
             });
         }
 
-        // Modal and Metrics Logic
+        function populateClusterTable(clusterId) {
+            const targetNodes = rawData.nodes.filter(n => n.cluster === clusterId);
+            const nodeMap = new Map(rawData.nodes.map(n => [n.id, n]));
+
+            currentClusterTableData = targetNodes.map(node => {
+                let linksCount = 0;
+                let totalWeight = 0;
+
+                rawData.edges.forEach(e => {
+                    let s = nodeMap.get(e.source);
+                    let t = nodeMap.get(e.target);
+                    if (s && t && (s.id === node.id || t.id === node.id)) {
+                        let other = s.id === node.id ? t : s;
+                        if (s.cluster === clusterId && other.cluster === clusterId) {
+                            linksCount++;
+                            totalWeight += e.weight;
+                        }
+                    }
+                });
+
+                let normTitle = (node.parsedDesc.title || node.label).toLowerCase().trim();
+                let scopus = scopusDataMap.get(normTitle);
+
+                return {
+                    nodeId: node.id,
+                    author: scopus ? scopus.authors : (node.parsedDesc.authors || 'N/A'),
+                    year: scopus ? scopus.year : (node.parsedDesc.year || 'N/A'),
+                    title: scopus ? scopus.title : (node.parsedDesc.title || node.label),
+                    abstract: scopus ? scopus.abstract : 'N/A',
+                    keywords: scopus ? scopus.keywords : 'N/A',
+                    links: linksCount,
+                    weight: totalWeight
+                };
+            });
+
+            document.getElementById("clusterTableTitle").textContent = `Cluster ${clusterId} Articles (${currentClusterTableData.length} nodes)`;
+            renderClusterTable();
+        }
+
+        function renderClusterTable() {
+            currentClusterTableData.sort((a, b) => {
+                let valA = a[clusterTableSortCol];
+                let valB = b[clusterTableSortCol];
+                if (typeof valA === 'string') {
+                    return clusterTableSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                } else {
+                    return clusterTableSortAsc ? valA - valB : valB - valA;
+                }
+            });
+
+            ['author', 'year', 'title', 'abstract', 'keywords', 'links', 'weight'].forEach(col => {
+                const indicator = document.getElementById(`sort-${col}`);
+                if (indicator) {
+                    if (clusterTableSortCol === col) {
+                        indicator.textContent = clusterTableSortAsc ? '▲' : '▼';
+                    } else {
+                        indicator.textContent = '';
+                    }
+                }
+            });
+
+            const tbody = document.getElementById("clusterTableBody");
+            tbody.innerHTML = "";
+            currentClusterTableData.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${escapeHtml(row.author)}</td>
+                    <td>${escapeHtml(String(row.year))}</td>
+                    <td><a href="#" class="node-link" data-id="${row.nodeId}">${escapeHtml(row.title)}</a></td>
+                    <td>${escapeHtml(row.abstract)}</td>
+                    <td>${escapeHtml(row.keywords)}</td>
+                    <td>${row.links}</td>
+                    <td>${row.weight.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.querySelectorAll("table.cluster-data-table th").forEach(th => {
+            th.addEventListener("click", () => {
+                const col = th.getAttribute("data-sort");
+                if (clusterTableSortCol === col) {
+                    clusterTableSortAsc = !clusterTableSortAsc;
+                } else {
+                    clusterTableSortCol = col;
+                    clusterTableSortAsc = true;
+                }
+                renderClusterTable();
+            });
+        });
+
         const modalOverlay = document.getElementById("modal-overlay");
         const closeModalBtn = document.getElementById("closeModalBtn");
         const metricsBtn = document.getElementById("metricsBtn");
         const saveCsvBtn = document.getElementById("saveCsvBtn");
+        const saveClusterCsvBtn = document.getElementById("saveClusterCsvBtn");
 
         metricsBtn.addEventListener("click", () => {
             const selectedCluster = document.getElementById('clusterSelect').value;
@@ -807,10 +1175,10 @@
             });
 
             document.getElementById("modal-title").textContent = selectedCluster === "All" ? "Intra-Cluster Metrics (All Clusters)" : `Intra-Cluster Metrics: Cluster ${selectedCluster}`;
-            sortAndRenderTable();
+            sortAndRenderMetricsTable();
         }
 
-        function sortAndRenderTable() {
+        function sortAndRenderMetricsTable() {
             currentTableData.sort((a, b) => {
                 let valA = a[currentSortColumn];
                 let valB = b[currentSortColumn];
@@ -839,14 +1207,14 @@
                     currentSortColumn = col;
                     sortAscending = true;
                 }
-                sortAndRenderTable();
+                sortAndRenderMetricsTable();
             });
         });
 
-        // Node Detail Modal Logic
         const nodeModalOverlay = document.getElementById("node-modal-overlay");
         const closeNodeModalBtn = document.getElementById("closeNodeModalBtn");
         const closeNodeDetailsBtn = document.getElementById("closeNodeDetailsBtn");
+        const bibtexBtn = document.getElementById("bibtexBtn");
 
         closeNodeModalBtn.addEventListener("click", () => {
             nodeModalOverlay.style.display = "none";
@@ -858,7 +1226,7 @@
             if (e.target === nodeModalOverlay) nodeModalOverlay.style.display = "none";
         });
 
-        document.getElementById("metricsTableBody").addEventListener("click", (e) => {
+        document.addEventListener("click", (e) => {
             if (e.target.classList.contains("node-link")) {
                 e.preventDefault();
                 const nodeId = +e.target.getAttribute("data-id");
@@ -867,6 +1235,7 @@
         });
 
         function showNodeDetails(nodeId) {
+            activeSelectedNodeId = nodeId;
             const nodeMap = new Map(rawData.nodes.map(n => [n.id, n]));
             const node = nodeMap.get(nodeId);
             if (!node) return;
@@ -874,11 +1243,35 @@
             document.getElementById("node-modal-title").textContent = node.label;
             const bodyEl = document.getElementById("node-modal-body");
 
+            let normTitle = (node.parsedDesc.title || node.label).toLowerCase().trim();
+            let scopus = scopusDataMap.get(normTitle);
+
+            let authorsVal = scopus ? scopus.authors : node.parsedDesc.authors;
+            let yearVal = scopus ? scopus.year : node.parsedDesc.year;
+            let sourceVal = scopus ? scopus.source : node.parsedDesc.source;
+            let volumeVal = scopus ? scopus.volume : node.parsedDesc.volume;
+            let issueVal = scopus ? scopus.issue : node.parsedDesc.issue;
+            let absVal = scopus ? scopus.abstract : '';
+            let kwVal = scopus ? scopus.keywords : '';
+
             let htmlContent = "";
+            if (authorsVal || yearVal || sourceVal || kwVal) {
+                htmlContent += `<div style="margin-bottom: 15px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    ${authorsVal ? `<p style="margin: 4px 0;"><strong>Authors:</strong> ${escapeHtml(authorsVal)}</p>` : ''}
+                    ${yearVal ? `<p style="margin: 4px 0;"><strong>Year:</strong> ${escapeHtml(String(yearVal))}</p>` : ''}
+                    ${sourceVal ? `<p style="margin: 4px 0;"><strong>Source/Journal:</strong> ${escapeHtml(sourceVal)}</p>` : ''}
+                    ${volumeVal && volumeVal !== 'N/A' ? `<p style="margin: 4px 0;"><strong>Volume:</strong> ${escapeHtml(String(volumeVal))}</p>` : ''}
+                    ${issueVal && issueVal !== 'N/A' ? `<p style="margin: 4px 0;"><strong>Issue:</strong> ${escapeHtml(String(issueVal))}</p>` : ''}
+                    ${kwVal ? `<p style="margin: 4px 0;"><strong>Keywords:</strong> ${escapeHtml(kwVal)}</p>` : ''}
+                </div>`;
+            }
+
+            if (absVal && absVal !== 'N/A') {
+                htmlContent += `<div style="margin-bottom: 15px;"><strong>Abstract:</strong><p style="margin-top: 5px; color: #475569;">${escapeHtml(absVal)}</p></div>`;
+            }
+
             if (node.description) {
                 htmlContent += `<div class="node-desc-container">${node.description}</div>`;
-            } else {
-                htmlContent += `<p>No description available for this node.</p>`;
             }
 
             if (node.url) {
@@ -887,36 +1280,69 @@
                 </div>`;
             }
 
+            htmlContent += `<div id="bibtex-container" class="bibtex-box"></div>`;
             bodyEl.innerHTML = htmlContent;
-
-            const table = bodyEl.querySelector('table');
-            if (table) {
-                table.style.width = '100%';
-                table.style.borderCollapse = 'collapse';
-                table.querySelectorAll('tr').forEach(tr => {
-                    const tds = tr.querySelectorAll('td');
-                    if (tds.length >= 2) {
-                        tds[0].style.fontWeight = '600';
-                        tds[0].style.padding = '8px 12px';
-                        tds[0].style.width = '25%';
-                        tds[0].style.verticalAlign = 'top';
-                        tds[0].style.color = '#475569';
-                        tds[0].style.textTransform = 'capitalize';
-
-                        tds[1].style.padding = '8px 12px';
-                        tds[1].style.verticalAlign = 'top';
-                        tds[1].style.color = '#1e293b';
-                    }
-                    tr.style.borderBottom = '1px solid #f1f5f9';
-                });
-            }
-
             nodeModalOverlay.style.display = "flex";
         }
 
+        bibtexBtn.addEventListener("click", () => {
+            if (activeSelectedNodeId === null) return;
+            const nodeMap = new Map(rawData.nodes.map(n => [n.id, n]));
+            const node = nodeMap.get(activeSelectedNodeId);
+            if (!node) return;
+
+            let normTitle = (node.parsedDesc.title || node.label).toLowerCase().trim();
+            let scopus = scopusDataMap.get(normTitle);
+
+            let author = scopus ? scopus.authors : (node.parsedDesc.authors || 'Unknown');
+            let title = scopus ? scopus.title : (node.parsedDesc.title || node.label);
+            let year = scopus ? scopus.year : (node.parsedDesc.year || 'nd');
+            let journal = scopus ? scopus.source : (node.parsedDesc.source || '');
+            let volume = scopus ? scopus.volume : (node.parsedDesc.volume || '');
+            let issue = scopus ? scopus.issue : (node.parsedDesc.issue || '');
+            let abstract = scopus ? scopus.abstract : '';
+            let citeKey = `node_${node.id}_${year !== 'N/A' && year !== 'nd' ? year : 'ref'}`;
+
+            let bibtexStr = `@article{${citeKey},\n`;
+            bibtexStr += `  author = {${author}},\n`;
+            bibtexStr += `  title = {${title}},\n`;
+            if (journal && journal !== 'N/A') bibtexStr += `  journal = {${journal}},\n`;
+            if (year && year !== 'N/A') bibtexStr += `  year = {${year}},\n`;
+            if (volume && volume !== 'N/A') bibtexStr += `  volume = {${volume}},\n`;
+            if (issue && issue !== 'N/A') bibtexStr += `  number = {${issue}},\n`;
+            if (abstract && abstract !== 'N/A') bibtexStr += `  abstract = {${abstract}},\n`;
+            bibtexStr += `}`;
+
+            const container = document.getElementById("bibtex-container");
+            container.style.display = "block";
+            
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
+                    <span style="font-weight: bold; color: #38bdf8;">BibTeX Citation</span>
+                    <button id="copyBibtexInnerBtn" class="action-btn" style="padding: 3px 8px; font-size: 0.75rem;">Copy Bibtex</button>
+                </div>
+                <pre style="margin: 0; white-space: pre-wrap; word-break: break-all;">${escapeHtml(bibtexStr)}</pre>
+            `;
+
+            document.getElementById("copyBibtexInnerBtn").addEventListener("click", () => {
+                navigator.clipboard.writeText(bibtexStr).then(() => {
+                    let btn = document.getElementById("copyBibtexInnerBtn");
+                    let originalText = btn.textContent;
+                    btn.textContent = "Copied!";
+                    btn.style.background = "#10b981";
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = "#3b82f6";
+                    }, 2000);
+                });
+            });
+
+            container.scrollIntoView({ behavior: 'smooth' });
+        });
+
         saveCsvBtn.addEventListener("click", () => {
             const selectedCluster = document.getElementById('clusterSelect').value;
-            let filename = selectedCluster === "All" ? "All_Clusters_Metrics.csv" : `Cluster_${selectedCluster}.csv`;
+            let filename = selectedCluster === "All" ? "All_Clusters_Metrics.csv" : `Cluster_${selectedCluster}_Metrics.csv`;
 
             let csvContent = "data:text/csv;charset=utf-8,Node,Total Links,Total Weight\n";
             currentTableData.forEach(row => {
@@ -933,8 +1359,35 @@
             document.body.removeChild(link);
         });
 
+        saveClusterCsvBtn.addEventListener("click", () => {
+            const selectedCluster = document.getElementById('clusterSelect').value;
+            let filename = `Cluster_${selectedCluster}_Articles.csv`;
+
+            let csvContent = "data:text/csv;charset=utf-8,Authors,Year,Title,Abstract,Keywords,Total Links,Total Weight\n";
+            currentClusterTableData.forEach(row => {
+                let escapedAuthors = `"${escapeCsv(row.author)}"`;
+                let escapedYear = `"${escapeCsv(String(row.year))}"`;
+                let escapedTitle = `"${escapeCsv(row.title)}"`;
+                let escapedAbstract = `"${escapeCsv(row.abstract)}"`;
+                let escapedKeywords = `"${escapeCsv(row.keywords)}"`;
+                csvContent += `${escapedAuthors},${escapedYear},${escapedTitle},${escapedAbstract},${escapedKeywords},${row.links},${row.weight.toFixed(2)}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        function escapeCsv(str) {
+            return String(str || '').replace(/"/g, '""');
+        }
+
         function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         }
 
         function dragstarted(event, d) {
