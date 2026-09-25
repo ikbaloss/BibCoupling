@@ -203,14 +203,15 @@
             word-break: break-word;
             vertical-align: top;
         }
-        /* Custom column widths to accommodate wrapped content */
+        /* Custom column widths to accommodate wrapped content (8 columns) */
         table.cluster-data-table th:nth-child(1), table.cluster-data-table td:nth-child(1) { width: 14%; } /* Authors */
-        table.cluster-data-table th:nth-child(2), table.cluster-data-table td:nth-child(2) { width: 6%; }  /* Year */
-        table.cluster-data-table th:nth-child(3), table.cluster-data-table td:nth-child(3) { width: 22%; } /* Title */
-        table.cluster-data-table th:nth-child(4), table.cluster-data-table td:nth-child(4) { width: 30%; } /* Abstract */
-        table.cluster-data-table th:nth-child(5), table.cluster-data-table td:nth-child(5) { width: 14%; } /* Keywords */
-        table.cluster-data-table th:nth-child(6), table.cluster-data-table td:nth-child(6) { width: 7%; }  /* Links */
-        table.cluster-data-table th:nth-child(7), table.cluster-data-table td:nth-child(7) { width: 7%; }  /* Weight */
+        table.cluster-data-table th:nth-child(2), table.cluster-data-table td:nth-child(2) { width: 5%; }  /* Year */
+        table.cluster-data-table th:nth-child(3), table.cluster-data-table td:nth-child(3) { width: 20%; } /* Title */
+        table.cluster-data-table th:nth-child(4), table.cluster-data-table td:nth-child(4) { width: 6%; }  /* Citation */
+        table.cluster-data-table th:nth-child(5), table.cluster-data-table td:nth-child(5) { width: 26%; } /* Abstract */
+        table.cluster-data-table th:nth-child(6), table.cluster-data-table td:nth-child(6) { width: 13%; } /* Keywords */
+        table.cluster-data-table th:nth-child(7), table.cluster-data-table td:nth-child(7) { width: 8%; }  /* Total Links */
+        table.cluster-data-table th:nth-child(8), table.cluster-data-table td:nth-child(8) { width: 8%; }  /* Total Weight */
 
         .sort-indicator {
             font-size: 0.75rem;
@@ -385,7 +386,7 @@
             <svg id="network-canvas"></svg>
         </div>
 
-        <!-- Bottom Table Container for Cluster Data (Scrollable below graph) -->
+        <!-- Bottom Table Container for Cluster Data -->
         <div id="cluster-table-container">
             <div class="table-header-bar">
                 <span id="clusterTableTitle">Cluster Table</span>
@@ -401,6 +402,7 @@
                             <th data-sort="author">Authors <span class="sort-indicator" id="sort-author"></span></th>
                             <th data-sort="year">Year <span class="sort-indicator" id="sort-year"></span></th>
                             <th data-sort="title">Title <span class="sort-indicator" id="sort-title"></span></th>
+                            <th data-sort="citation">Citation <span class="sort-indicator" id="sort-citation"></span></th>
                             <th data-sort="abstract">Abstract <span class="sort-indicator" id="sort-abstract"></span></th>
                             <th data-sort="keywords">Keywords <span class="sort-indicator" id="sort-keywords"></span></th>
                             <th data-sort="links">Total Links <span class="sort-indicator" id="sort-links"></span></th>
@@ -543,7 +545,10 @@
                 let idMatch = content.match(/id\s+(\d+)/);
                 let labelMatch = content.match(/label\s+"([^"]*)"/);
                 let clusterMatch = content.match(/cluster\s+(\d+)/);
-                let weightMatch = content.match(/weight\s+([0-9\.eE+-]+)/);
+                
+                // Robust weight/citations attribute matching (handles unquoted, quoted values, and alternate keys)
+                let weightMatch = content.match(/(?:weight|citations|weight\s*<\s*citations\s*>)\s+"?([0-9\.eE+-]+)"?/i);
+
                 let descMatch = content.match(/description\s+"([^"]*)"/);
                 let urlMatch = content.match(/url\s+"([^"]*)"/);
 
@@ -583,7 +588,7 @@
                 let content = match[1];
                 let sourceMatch = content.match(/source\s+(\d+)/);
                 let targetMatch = content.match(/target\s+(\d+)/);
-                let valueMatch = content.match(/(?:value|weight)\s+([0-9\.eE+-]+)/);
+                let valueMatch = content.match(/(?:value|weight)\s+"?([0-9\.eE+-]+)"?/i);
 
                 if (sourceMatch && targetMatch) {
                     edges.push({
@@ -884,7 +889,8 @@
                 if (sizeMode === 'equal') {
                     return 8;
                 } else if (sizeMode === 'citation') {
-                    return Math.max(4, Math.min(25, Math.sqrt(d.weight) * 3));
+                    // Properly scale based on node's citation/weight attribute values
+                    return Math.max(4, Math.min(28, Math.sqrt(d.weight) * 3.5));
                 } else if (sizeMode === 'links') {
                     let count = visibleLinksMap.get(d.id) || 0;
                     return Math.max(5, Math.min(22, Math.sqrt(count + 1) * 4));
@@ -1059,6 +1065,7 @@
                     author: scopus ? scopus.authors : (node.parsedDesc.authors || 'N/A'),
                     year: scopus ? scopus.year : (node.parsedDesc.year || 'N/A'),
                     title: scopus ? scopus.title : (node.parsedDesc.title || node.label),
+                    citation: node.weight,
                     abstract: scopus ? scopus.abstract : 'N/A',
                     keywords: scopus ? scopus.keywords : 'N/A',
                     links: linksCount,
@@ -1081,7 +1088,7 @@
                 }
             });
 
-            ['author', 'year', 'title', 'abstract', 'keywords', 'links', 'weight'].forEach(col => {
+            ['author', 'year', 'title', 'citation', 'abstract', 'keywords', 'links', 'weight'].forEach(col => {
                 const indicator = document.getElementById(`sort-${col}`);
                 if (indicator) {
                     if (clusterTableSortCol === col) {
@@ -1100,6 +1107,7 @@
                     <td>${escapeHtml(row.author)}</td>
                     <td>${escapeHtml(String(row.year))}</td>
                     <td><a href="#" class="node-link" data-id="${row.nodeId}">${escapeHtml(row.title)}</a></td>
+                    <td>${row.citation}</td>
                     <td>${escapeHtml(row.abstract)}</td>
                     <td>${escapeHtml(row.keywords)}</td>
                     <td>${row.links}</td>
@@ -1262,6 +1270,7 @@
                     ${sourceVal ? `<p style="margin: 4px 0;"><strong>Source/Journal:</strong> ${escapeHtml(sourceVal)}</p>` : ''}
                     ${volumeVal && volumeVal !== 'N/A' ? `<p style="margin: 4px 0;"><strong>Volume:</strong> ${escapeHtml(String(volumeVal))}</p>` : ''}
                     ${issueVal && issueVal !== 'N/A' ? `<p style="margin: 4px 0;"><strong>Issue:</strong> ${escapeHtml(String(issueVal))}</p>` : ''}
+                    <p style="margin: 4px 0;"><strong>Citation Weight:</strong> ${node.weight}</p>
                     ${kwVal ? `<p style="margin: 4px 0;"><strong>Keywords:</strong> ${escapeHtml(kwVal)}</p>` : ''}
                 </div>`;
             }
@@ -1363,14 +1372,15 @@
             const selectedCluster = document.getElementById('clusterSelect').value;
             let filename = `Cluster_${selectedCluster}_Articles.csv`;
 
-            let csvContent = "data:text/csv;charset=utf-8,Authors,Year,Title,Abstract,Keywords,Total Links,Total Weight\n";
+            let csvContent = "data:text/csv;charset=utf-8,Authors,Year,Title,Citation,Abstract,Keywords,Total Links,Total Weight\n";
             currentClusterTableData.forEach(row => {
                 let escapedAuthors = `"${escapeCsv(row.author)}"`;
                 let escapedYear = `"${escapeCsv(String(row.year))}"`;
                 let escapedTitle = `"${escapeCsv(row.title)}"`;
+                let escapedCitation = `"${escapeCsv(String(row.citation))}"`;
                 let escapedAbstract = `"${escapeCsv(row.abstract)}"`;
                 let escapedKeywords = `"${escapeCsv(row.keywords)}"`;
-                csvContent += `${escapedAuthors},${escapedYear},${escapedTitle},${escapedAbstract},${escapedKeywords},${row.links},${row.weight.toFixed(2)}\n`;
+                csvContent += `${escapedAuthors},${escapedYear},${escapedTitle},${escapedCitation},${escapedAbstract},${escapedKeywords},${row.links},${row.weight.toFixed(2)}\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
