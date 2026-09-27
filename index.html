@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VOSviewer Cluster Explorer with Scopus CSV</title>
     <!-- Load D3.js v7 -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -219,7 +219,7 @@
             color: #64748b;
         }
         /* Modal Styles */
-        #modal-overlay, #node-modal-overlay {
+        #modal-overlay, #node-modal-overlay, #agg-modal-overlay, #agg-articles-modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.5);
@@ -231,7 +231,13 @@
         #node-modal-overlay {
             z-index: 1100;
         }
-        #modal-content, #node-modal-content {
+        #agg-modal-overlay {
+            z-index: 1000;
+        }
+        #agg-articles-modal-overlay {
+            z-index: 1060;
+        }
+        #modal-content, #node-modal-content, #agg-modal-content, #agg-articles-modal-content {
             background: #fff;
             width: 700px;
             max-height: 85vh;
@@ -240,6 +246,10 @@
             flex-direction: column;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             overflow: hidden;
+        }
+        #agg-modal-content .modal-body, #agg-articles-modal-content .modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
         }
         .modal-header {
             padding: 15px 20px;
@@ -266,13 +276,13 @@
             overflow-y: auto;
             flex: 1;
         }
-        table.metrics-table {
+        table.metrics-table, table.agg-data-table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
             font-size: 0.9rem;
         }
-        table.metrics-table th {
+        table.metrics-table th, table.agg-data-table th {
             background: #f1f5f9;
             padding: 10px 15px;
             cursor: pointer;
@@ -282,10 +292,10 @@
             top: 0;
             z-index: 1;
         }
-        table.metrics-table th:hover {
+        table.metrics-table th:hover, table.agg-data-table th:hover {
             background: #e2e8f0;
         }
-        table.metrics-table td {
+        table.metrics-table td, table.agg-data-table td {
             padding: 10px 15px;
             border-bottom: 1px solid #f1f5f9;
         }
@@ -338,6 +348,41 @@
             max-height: 200px;
             overflow-y: auto;
         }
+        /* Shared References Modal */
+        #ref-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1150;
+        }
+        #ref-modal-content {
+            background: #fff;
+            width: 800px;
+            max-width: 92vw;
+            max-height: 85vh;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        .ref-summary-pill {
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 0.9rem;
+        }
+        .shared-ref-list {
+            padding-left: 20px;
+            line-height: 1.6;
+            font-size: 0.88rem;
+        }
+        .shared-ref-list li {
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
     </style>
 </head>
 <body>
@@ -368,6 +413,8 @@
                 <option value="weight">Total Visible Weight</option>
             </select>
             <button id="metricsBtn" class="action-btn" disabled>Show links/weight</button>
+            <button id="showSharedRefsBtn" class="action-btn" disabled>Show Shared References</button>
+            <button id="showKeywordsBtn" class="action-btn" disabled>Show Keywords</button>
         </div>
     </header>
 
@@ -425,7 +472,7 @@
                 <button class="close-modal" id="closeModalBtn">&times;</button>
             </div>
             <div class="modal-body">
-                <table class="metrics-table">
+                <table class="metrics-table" id="metrics-table-main">
                     <thead>
                         <tr>
                             <th data-sort="node">Node</th>
@@ -440,6 +487,48 @@
             </div>
             <div class="modal-footer" style="justify-content: flex-end;">
                 <button id="saveCsvBtn" class="action-btn">Save to CSV file</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for cluster-wide Shared References / Shared Keywords aggregate table -->
+    <div id="agg-modal-overlay">
+        <div id="agg-modal-content">
+            <div class="modal-header">
+                <h3 id="agg-modal-title">Shared References</h3>
+                <button class="close-modal" id="closeAggModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="agg-data-table" id="agg-table">
+                    <thead>
+                        <tr>
+                            <th id="agg-th-text">Shared Reference <span class="sort-indicator" id="agg-sort-text"></span></th>
+                            <th id="agg-th-count">Number of Articles <span class="sort-indicator" id="agg-sort-count"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="aggTableBody">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer" style="justify-content: flex-end;">
+                <button id="saveAggCsvBtn" class="action-btn">Save to CSV</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for the list of articles behind one shared reference / keyword (drill-down from above) -->
+    <div id="agg-articles-modal-overlay">
+        <div id="agg-articles-modal-content">
+            <div class="modal-header">
+                <h3 id="agg-articles-modal-title">Articles</h3>
+                <button class="close-modal" id="closeAggArticlesModalBtn">&times;</button>
+            </div>
+            <div class="modal-body" id="agg-articles-modal-body" style="padding: 20px; font-size: 0.95rem;">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="modal-footer" style="justify-content: flex-end;">
+                <button id="closeAggArticlesBtn" class="action-btn">Close</button>
             </div>
         </div>
     </div>
@@ -463,9 +552,30 @@
         </div>
     </div>
 
+    <!-- Modal for Shared References & Keywords (edge click, within a selected cluster) -->
+    <div id="ref-modal-overlay">
+        <div id="ref-modal-content">
+            <div class="modal-header">
+                <h3 id="ref-modal-title">Shared References &amp; Keywords</h3>
+                <button class="close-modal" id="closeRefModalBtn">&times;</button>
+            </div>
+            <div class="modal-body" id="ref-modal-body" style="padding: 20px; font-size: 0.95rem;">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="modal-footer">
+                <div style="display: flex; gap: 10px;">
+                    <button id="saveRefCsvBtn" class="action-btn">Save Shared References to CSV</button>
+                    <button id="saveKwCsvBtn" class="action-btn">Save Shared Keywords to CSV</button>
+                </div>
+                <button id="closeRefDetailsBtn" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let rawData = { nodes: [], edges: [] };
         let scopusDataMap = new Map();
+        let lastCsvText = null;
         let simulation = null;
         let currentTableData = [];
         let currentSortColumn = 'node';
@@ -482,6 +592,9 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 parseGML(e.target.result);
+                // Matching (title/authors -> Scopus row) is keyed by this GML's node ids, so if a
+                // CSV was already loaded, re-run the match against the newly loaded node set.
+                if (lastCsvText) parseScopusCSV(lastCsvText);
                 document.getElementById('drop-zone').classList.add('hidden');
                 document.getElementById('csvFile').disabled = false;
                 document.getElementById('conflateToggle').disabled = false;
@@ -490,6 +603,7 @@
                 document.getElementById('metricsBtn').disabled = false;
                 document.getElementById('conflateToggle').checked = false;
                 populateClusterDropdown();
+                updateClusterScopedButtons();
                 renderNetwork();
             };
             reader.readAsText(file);
@@ -562,12 +676,12 @@
                     let volMatch = descHtml.match(/<td>Volume:<\/td>\s*<td>(.*?)<\/td>/i);
                     let issueMatch = descHtml.match(/<td>Issue:<\/td>\s*<td>(.*?)<\/td>/i);
 
-                    if (authorMatch) parsedDesc.authors = authorMatch[1].trim();
-                    if (titleMatch) parsedDesc.title = titleMatch[1].trim();
-                    if (yearMatch) parsedDesc.year = yearMatch[1].trim();
-                    if (sourceMatch) parsedDesc.source = sourceMatch[1].trim();
-                    if (volMatch) parsedDesc.volume = volMatch[1].trim();
-                    if (issueMatch) parsedDesc.issue = issueMatch[1].trim();
+                    if (authorMatch) parsedDesc.authors = decodeHtmlEntities(authorMatch[1].trim());
+                    if (titleMatch) parsedDesc.title = decodeHtmlEntities(titleMatch[1].trim());
+                    if (yearMatch) parsedDesc.year = decodeHtmlEntities(yearMatch[1].trim());
+                    if (sourceMatch) parsedDesc.source = decodeHtmlEntities(sourceMatch[1].trim());
+                    if (volMatch) parsedDesc.volume = decodeHtmlEntities(volMatch[1].trim());
+                    if (issueMatch) parsedDesc.issue = decodeHtmlEntities(issueMatch[1].trim());
                 }
                 
                 if (idMatch) {
@@ -638,32 +752,567 @@
             let titleIdx = headers.findIndex(h => h === 'title' || h === 'document title');
             let absIdx = headers.findIndex(h => h === 'abstract');
             let kwIdx = headers.findIndex(h => h.includes('keyword') || h.includes('author keywords') || h.includes('index keywords'));
+            // Dedicated "Author Keywords" column, used specifically for the shared-keywords
+            // comparison (distinct from the generic 'keywords' field above, which may pick up
+            // Index Keywords or a combined column instead).
+            let authorKwIdx = headers.findIndex(h => h === 'author keywords');
+            if (authorKwIdx === -1) authorKwIdx = headers.findIndex(h => h === 'keywords' || h === 'index keywords');
             let sourceIdx = headers.findIndex(h => h === 'source title' || h === 'journal' || h === 'publication name');
             let volIdx = headers.findIndex(h => h === 'volume');
             let issueIdx = headers.findIndex(h => h === 'issue');
+            let refIdx = headers.findIndex(h => h === 'references' || h === 'cited references');
 
-            let gmlTitles = new Set(rawData.nodes.map(n => (n.parsedDesc.title || n.label).toLowerCase().trim()));
+            // Parse every CSV row into a record, and index records by their normalized title so a
+            // GML node can be looked up against it. Titles are NOT assumed unique - duplicate or
+            // near-duplicate titles are all kept, and disambiguated per-node using Authors below.
+            const csvRows = [];
+            const titleIndex = new Map();
 
             for (let i = 1; i < lines.length; i++) {
                 if (!lines[i].trim()) continue;
                 let cols = parseCSVLine(lines[i]).map(c => c.replace(/^"|"$/g, '').trim());
-                
-                let title = titleIdx !== -1 ? cols[titleIdx] : '';
-                let normTitle = title.toLowerCase().trim();
 
-                if (normTitle && gmlTitles.has(normTitle)) {
-                    scopusDataMap.set(normTitle, {
-                        authors: authorIdx !== -1 ? cols[authorIdx] : 'N/A',
-                        year: yearIdx !== -1 ? cols[yearIdx] : 'N/A',
-                        title: title,
-                        abstract: absIdx !== -1 ? cols[absIdx] : 'N/A',
-                        keywords: kwIdx !== -1 ? cols[kwIdx] : 'N/A',
-                        source: sourceIdx !== -1 ? cols[sourceIdx] : 'N/A',
-                        volume: volIdx !== -1 ? cols[volIdx] : 'N/A',
-                        issue: issueIdx !== -1 ? cols[issueIdx] : 'N/A'
-                    });
+                let title = titleIdx !== -1 ? cols[titleIdx] : '';
+                let authors = authorIdx !== -1 ? cols[authorIdx] : '';
+                let normTitle = normalizeForCompare(title);
+
+                const record = {
+                    authors: authors || 'N/A',
+                    year: yearIdx !== -1 ? cols[yearIdx] : 'N/A',
+                    title: title,
+                    normTitle: normTitle,
+                    abstract: absIdx !== -1 ? cols[absIdx] : 'N/A',
+                    keywords: kwIdx !== -1 ? cols[kwIdx] : 'N/A',
+                    authorKeywords: authorKwIdx !== -1 ? cols[authorKwIdx] : 'N/A',
+                    source: sourceIdx !== -1 ? cols[sourceIdx] : 'N/A',
+                    volume: volIdx !== -1 ? cols[volIdx] : 'N/A',
+                    issue: issueIdx !== -1 ? cols[issueIdx] : 'N/A',
+                    references: refIdx !== -1 ? cols[refIdx] : 'N/A'
+                };
+
+                csvRows.push(record);
+                if (normTitle) {
+                    if (!titleIndex.has(normTitle)) titleIndex.set(normTitle, []);
+                    titleIndex.get(normTitle).push(record);
                 }
             }
+
+            // For every node currently loaded from the GML file, find its best-matching Scopus CSV
+            // row: first by (normalized, case-insensitive) Title, then - if more than one CSV row
+            // shares that title, or the title only matches approximately - by Authors, comparing
+            // author surnames so that "Bakke E., Sitter N." and "bakke, elisabeth; sitter, nick"
+            // (different Scopus author-field styles) still line up.
+            rawData.nodes.forEach(node => {
+                const match = findScopusMatchForNode(node, titleIndex, csvRows);
+                if (match) scopusDataMap.set(node.id, match);
+            });
+
+            lastCsvText = text;
+        }
+
+        // Removes HTML entity escaping (e.g. "&amp;" -> "&") that VOSviewer/GML description text
+        // may contain, since that text is rendered as an HTML tooltip.
+        function decodeHtmlEntities(str) {
+            if (!str) return '';
+            const el = document.createElement('textarea');
+            el.innerHTML = str;
+            return el.value;
+        }
+
+        // Normalizes text for matching: decodes HTML entities, lower-cases, and folds common
+        // typographic variants (curly quotes, en/em dashes) to their plain-ASCII equivalents so
+        // that trivial formatting differences between a GML description and a Scopus CSV cell
+        // don't cause an otherwise-identical Title/Authors string to fail to match.
+        function normalizeForCompare(str) {
+            if (!str) return '';
+            return decodeHtmlEntities(String(str))
+                .toLowerCase()
+                .replace(/[\u2018\u2019\u02BC\u2032]/g, "'")
+                .replace(/[\u201C\u201D]/g, '"')
+                .replace(/[\u2010-\u2015]/g, '-')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // Extracts author surnames from an Authors string, regardless of which of the two common
+        // Scopus formats it's in: "Surname Initial., Surname Initial." (comma-separated authors)
+        // or "Surname, Firstname; Surname, Firstname" (semicolon-separated authors).
+        function extractAuthorSurnames(authorsStr) {
+            const text = normalizeForCompare(authorsStr);
+            if (!text) return [];
+            let parts = text.includes(';') ? text.split(';') : text.split(',');
+            return parts.map(p => {
+                p = p.trim();
+                if (!p) return '';
+                let commaIdx = p.indexOf(',');
+                let surname = commaIdx !== -1 ? p.slice(0, commaIdx) : p.split(/\s+/)[0];
+                return surname.replace(/[^a-z]/g, '').trim();
+            }).filter(Boolean);
+        }
+
+        // Fraction of the smaller author set that also appears in the larger one - used to rank
+        // candidate CSV rows that share the same (or a very similar) title.
+        function authorOverlapScore(authorsA, authorsB) {
+            const setA = new Set(extractAuthorSurnames(authorsA));
+            const setB = new Set(extractAuthorSurnames(authorsB));
+            if (setA.size === 0 || setB.size === 0) return 0;
+            let common = 0;
+            setA.forEach(s => { if (setB.has(s)) common++; });
+            return common / Math.min(setA.size, setB.size);
+        }
+
+        // Finds the Scopus CSV row that corresponds to a given GML node, using its parsed
+        // description (Title, Authors). Falls back to a substring match for titles that were
+        // truncated on one side, and uses Authors to break ties when a title matches more than
+        // one CSV row.
+        function findScopusMatchForNode(node, titleIndex, csvRows) {
+            const nodeTitleNorm = normalizeForCompare(node.parsedDesc.title || node.label);
+            const nodeAuthors = node.parsedDesc.authors || '';
+
+            let candidates = nodeTitleNorm ? (titleIndex.get(nodeTitleNorm) || []) : [];
+
+            // No exact (normalized) title match - try a substring match for truncated titles.
+            // Restricted to reasonably long titles to avoid spurious matches on short strings.
+            if (candidates.length === 0 && nodeTitleNorm.length > 15) {
+                candidates = csvRows.filter(r =>
+                    r.normTitle && r.normTitle.length > 15 &&
+                    (r.normTitle.includes(nodeTitleNorm) || nodeTitleNorm.includes(r.normTitle))
+                );
+            }
+
+            if (candidates.length === 0) return null;
+            if (candidates.length === 1) return candidates[0];
+
+            // Multiple CSV rows share (essentially) the same title - use Authors to pick the
+            // correct one.
+            let best = candidates[0];
+            let bestScore = -1;
+            candidates.forEach(c => {
+                const score = authorOverlapScore(nodeAuthors, c.authors);
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = c;
+                }
+            });
+            return best;
+        }
+
+        // ---- Shared References (Bibliographic Coupling detail) helpers ----
+
+        // Splits a Scopus "References" cell into an array of individual reference strings.
+        // Each individual reference in Scopus's exported format ends with a "(YYYY)" year marker
+        // (occasionally "(YYYYa)" style suffixes), and consecutive references are separated by "; ".
+        // Author lists WITHIN a single reference are also separated by ";", so we cannot simply
+        // split on every semicolon. Instead we greedily match the shortest possible chunk of text
+        // that ends in a "(YYYY)" pattern - this correctly stops at the end of one reference and
+        // resumes at the start of the next, regardless of how many "author;author;author" segments
+        // appear before the year.
+        function parseReferencesString(refStr) {
+            if (!refStr || refStr === 'N/A') return [];
+            const text = refStr.trim();
+            if (!text) return [];
+
+            const yearMarker = /[\s\S]*?\(\d{4}[a-z]?\)/g;
+            const matches = text.match(yearMarker);
+
+            if (!matches || matches.length === 0) {
+                // No recognizable "(YYYY)" markers at all - can't safely split on ";" without
+                // risking cutting a reference's own author list, so return it as a single entry.
+                return [text];
+            }
+
+            const refs = matches
+                .map(m => m.replace(/^[;\s]+/, '').trim())
+                .filter(Boolean);
+
+            // Anything left over after the final "(YYYY)" match (e.g. a trailing reference that
+            // has no year, such as "in press" or a personal communication) gets appended too.
+            const lastMatch = matches[matches.length - 1];
+            const consumedUpTo = text.lastIndexOf(lastMatch) + lastMatch.length;
+            const remainder = text.slice(consumedUpTo).replace(/^[;\s]+/, '').trim();
+            if (remainder) refs.push(remainder);
+
+            return refs;
+        }
+
+        // Normalizes a single reference string into a comparison key so that trivial formatting
+        // differences (spacing, punctuation, casing) don't prevent a match between two reference
+        // lists that both cite the same underlying source.
+        function normalizeReferenceKey(ref) {
+            return ref
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // Looks up a node's full Scopus CSV record. Matching is precomputed per-node in
+        // parseScopusCSV (Title first, Authors to disambiguate), keyed by node id.
+        function getScopusRecordForNode(node) {
+            return scopusDataMap.get(node.id);
+        }
+
+        // Computes the intersection of the two nodes' reference lists.
+        function computeSharedReferences(nodeA, nodeB) {
+            const scopusA = getScopusRecordForNode(nodeA);
+            const scopusB = getScopusRecordForNode(nodeB);
+
+            const aFound = !!(scopusA && scopusA.references && scopusA.references !== 'N/A');
+            const bFound = !!(scopusB && scopusB.references && scopusB.references !== 'N/A');
+
+            const aRefs = aFound ? parseReferencesString(scopusA.references) : [];
+            const bRefs = bFound ? parseReferencesString(scopusB.references) : [];
+
+            const shared = [];
+            if (aFound && bFound) {
+                const mapB = new Map();
+                bRefs.forEach(r => {
+                    const key = normalizeReferenceKey(r);
+                    if (key && !mapB.has(key)) mapB.set(key, r);
+                });
+                const seen = new Set();
+                aRefs.forEach(r => {
+                    const key = normalizeReferenceKey(r);
+                    if (key && mapB.has(key) && !seen.has(key)) {
+                        seen.add(key);
+                        shared.push(r);
+                    }
+                });
+            }
+
+            return { aFound, bFound, aRefs, bRefs, shared };
+        }
+
+        // Splits a Scopus "Author Keywords" cell into individual keywords. Scopus separates
+        // author keywords with semicolons (e.g. "backsliding; democracy; central europe").
+        function parseAuthorKeywords(kwStr) {
+            if (!kwStr || kwStr === 'N/A') return [];
+            return kwStr.split(';').map(k => k.trim()).filter(Boolean);
+        }
+
+        // Computes the intersection of the two nodes' Author Keywords lists. Comparison reuses
+        // normalizeForCompare (lowercase, HTML-entity-decoded, quote/dash-normalized, whitespace-
+        // collapsed) so trivial formatting differences don't prevent an otherwise identical
+        // keyword from matching.
+        function computeSharedKeywords(nodeA, nodeB) {
+            const scopusA = getScopusRecordForNode(nodeA);
+            const scopusB = getScopusRecordForNode(nodeB);
+
+            const aFound = !!(scopusA && scopusA.authorKeywords && scopusA.authorKeywords !== 'N/A');
+            const bFound = !!(scopusB && scopusB.authorKeywords && scopusB.authorKeywords !== 'N/A');
+
+            const aKw = aFound ? parseAuthorKeywords(scopusA.authorKeywords) : [];
+            const bKw = bFound ? parseAuthorKeywords(scopusB.authorKeywords) : [];
+
+            const shared = [];
+            if (aFound && bFound) {
+                const mapB = new Map();
+                bKw.forEach(k => {
+                    const key = normalizeForCompare(k);
+                    if (key && !mapB.has(key)) mapB.set(key, k);
+                });
+                const seen = new Set();
+                aKw.forEach(k => {
+                    const key = normalizeForCompare(k);
+                    if (key && mapB.has(key) && !seen.has(key)) {
+                        seen.add(key);
+                        shared.push(k);
+                    }
+                });
+            }
+
+            return { aFound, bFound, aKw, bKw, shared };
+        }
+
+        // ---- Cluster-wide aggregation (for "Show Shared References" / "Show Keywords" buttons) ----
+        //
+        // Unlike the pairwise edge-click popup above (which intersects exactly two nodes'
+        // reference/keyword lists), these look across EVERY article in the selected cluster and
+        // group them by reference/keyword, so we can show, for each reference or keyword that is
+        // shared by two or more articles in the cluster, how many articles share it - and which
+        // ones, on drill-down.
+
+        // Groups a cluster's articles by (normalized) reference. Only references cited by 2+
+        // articles are considered "shared" and included in the result. Each node's own reference
+        // list is de-duplicated first, so a reference appearing twice in one article's own
+        // reference list is only counted once for that article.
+        function computeClusterReferenceShares(clusterId) {
+            const nodes = rawData.nodes.filter(n => n.cluster === clusterId);
+            const refMap = new Map(); // normalized key -> { text, nodeIds: Set }
+
+            nodes.forEach(node => {
+                const scopus = getScopusRecordForNode(node);
+                if (!scopus || !scopus.references || scopus.references === 'N/A') return;
+                const refs = parseReferencesString(scopus.references);
+                const seenForThisNode = new Set();
+                refs.forEach(r => {
+                    const key = normalizeReferenceKey(r);
+                    if (!key || seenForThisNode.has(key)) return;
+                    seenForThisNode.add(key);
+                    if (!refMap.has(key)) refMap.set(key, { text: r, nodeIds: new Set() });
+                    refMap.get(key).nodeIds.add(node.id);
+                });
+            });
+
+            const rows = [];
+            refMap.forEach(val => {
+                if (val.nodeIds.size >= 2) {
+                    rows.push({ text: val.text, count: val.nodeIds.size, nodeIds: Array.from(val.nodeIds) });
+                }
+            });
+            rows.sort((a, b) => b.count - a.count);
+            return rows;
+        }
+
+        // Same idea, but grouping by (normalized) Author Keyword instead of Reference.
+        function computeClusterKeywordShares(clusterId) {
+            const nodes = rawData.nodes.filter(n => n.cluster === clusterId);
+            const kwMap = new Map();
+
+            nodes.forEach(node => {
+                const scopus = getScopusRecordForNode(node);
+                if (!scopus || !scopus.authorKeywords || scopus.authorKeywords === 'N/A') return;
+                const kws = parseAuthorKeywords(scopus.authorKeywords);
+                const seenForThisNode = new Set();
+                kws.forEach(k => {
+                    const key = normalizeForCompare(k);
+                    if (!key || seenForThisNode.has(key)) return;
+                    seenForThisNode.add(key);
+                    if (!kwMap.has(key)) kwMap.set(key, { text: k, nodeIds: new Set() });
+                    kwMap.get(key).nodeIds.add(node.id);
+                });
+            });
+
+            const rows = [];
+            kwMap.forEach(val => {
+                if (val.nodeIds.size >= 2) {
+                    rows.push({ text: val.text, count: val.nodeIds.size, nodeIds: Array.from(val.nodeIds) });
+                }
+            });
+            rows.sort((a, b) => b.count - a.count);
+            return rows;
+        }
+
+        let currentAggMode = 'references'; // 'references' or 'keywords', drives save-to-csv labels
+        let currentAggRows = [];
+        let aggSortCol = 'count';
+        let aggSortAsc = false;
+
+        function renderAggTable() {
+            currentAggRows.sort((a, b) => {
+                let valA = aggSortCol === 'count' ? a.count : a.text;
+                let valB = aggSortCol === 'count' ? b.count : b.text;
+                if (typeof valA === 'string') {
+                    return aggSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
+                return aggSortAsc ? valA - valB : valB - valA;
+            });
+
+            document.getElementById('agg-sort-text').textContent = aggSortCol === 'text' ? (aggSortAsc ? '▲' : '▼') : '';
+            document.getElementById('agg-sort-count').textContent = aggSortCol === 'count' ? (aggSortAsc ? '▲' : '▼') : '';
+
+            const tbody = document.getElementById('aggTableBody');
+            tbody.innerHTML = '';
+            currentAggRows.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td><a href="#" class="agg-item-link" data-idx="${idx}">${escapeHtml(row.text)}</a></td><td>${row.count}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('agg-th-text').addEventListener('click', () => {
+            if (aggSortCol === 'text') aggSortAsc = !aggSortAsc; else { aggSortCol = 'text'; aggSortAsc = true; }
+            renderAggTable();
+        });
+        document.getElementById('agg-th-count').addEventListener('click', () => {
+            if (aggSortCol === 'count') aggSortAsc = !aggSortAsc; else { aggSortCol = 'count'; aggSortAsc = false; }
+            renderAggTable();
+        });
+
+        function showClusterSharedReferencesModal() {
+            const selectedCluster = document.getElementById('clusterSelect').value;
+            if (selectedCluster === "All") return;
+            const clusterId = +selectedCluster;
+
+            currentAggMode = 'references';
+            currentAggRows = computeClusterReferenceShares(clusterId);
+            aggSortCol = 'count';
+            aggSortAsc = false;
+
+            document.getElementById('agg-modal-title').textContent =
+                `Shared References in Cluster ${clusterId} (${currentAggRows.length})`;
+            document.getElementById('agg-th-text').firstChild.textContent = 'Shared Reference ';
+
+            renderAggTable();
+            document.getElementById('agg-modal-overlay').style.display = 'flex';
+        }
+
+        function showClusterSharedKeywordsModal() {
+            const selectedCluster = document.getElementById('clusterSelect').value;
+            if (selectedCluster === "All") return;
+            const clusterId = +selectedCluster;
+
+            currentAggMode = 'keywords';
+            currentAggRows = computeClusterKeywordShares(clusterId);
+            aggSortCol = 'count';
+            aggSortAsc = false;
+
+            document.getElementById('agg-modal-title').textContent =
+                `Shared Author Keywords in Cluster ${clusterId} (${currentAggRows.length})`;
+            document.getElementById('agg-th-text').firstChild.textContent = 'Shared Keyword ';
+
+            renderAggTable();
+            document.getElementById('agg-modal-overlay').style.display = 'flex';
+        }
+
+        document.getElementById('showSharedRefsBtn').addEventListener('click', showClusterSharedReferencesModal);
+        document.getElementById('showKeywordsBtn').addEventListener('click', showClusterSharedKeywordsModal);
+
+        // Drill-down: clicking a reference/keyword in the aggregate table shows the articles
+        // (from the current cluster) that cite that reference / use that keyword.
+        document.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('agg-item-link')) return;
+            e.preventDefault();
+            const idx = +e.target.getAttribute('data-idx');
+            const row = currentAggRows[idx];
+            if (!row) return;
+
+            const nodeMap = new Map(rawData.nodes.map(n => [n.id, n]));
+            const kindLabel = currentAggMode === 'references' ? 'citing reference' : 'using keyword';
+            document.getElementById('agg-articles-modal-title').textContent =
+                `Articles ${kindLabel}: "${row.text}"`;
+
+            let html = `<table class="agg-data-table"><thead><tr><th>Authors</th><th>Year</th><th>Title</th></tr></thead><tbody>`;
+            row.nodeIds.forEach(id => {
+                const node = nodeMap.get(id);
+                if (!node) return;
+                const scopus = getScopusRecordForNode(node);
+                const authors = scopus ? scopus.authors : (node.parsedDesc.authors || 'N/A');
+                const year = scopus ? scopus.year : (node.parsedDesc.year || 'N/A');
+                const title = scopus ? scopus.title : (node.parsedDesc.title || node.label);
+                html += `<tr><td>${escapeHtml(authors)}</td><td>${escapeHtml(String(year))}</td><td><a href="#" class="node-link" data-id="${node.id}">${escapeHtml(title)}</a></td></tr>`;
+            });
+            html += `</tbody></table>`;
+
+            document.getElementById('agg-articles-modal-body').innerHTML = html;
+            document.getElementById('agg-articles-modal-overlay').style.display = 'flex';
+        });
+
+        const aggModalOverlay = document.getElementById('agg-modal-overlay');
+        document.getElementById('closeAggModalBtn').addEventListener('click', () => {
+            aggModalOverlay.style.display = 'none';
+        });
+        window.addEventListener('click', (e) => {
+            if (e.target === aggModalOverlay) aggModalOverlay.style.display = 'none';
+        });
+
+        const aggArticlesModalOverlay = document.getElementById('agg-articles-modal-overlay');
+        document.getElementById('closeAggArticlesModalBtn').addEventListener('click', () => {
+            aggArticlesModalOverlay.style.display = 'none';
+        });
+        document.getElementById('closeAggArticlesBtn').addEventListener('click', () => {
+            aggArticlesModalOverlay.style.display = 'none';
+        });
+        window.addEventListener('click', (e) => {
+            if (e.target === aggArticlesModalOverlay) aggArticlesModalOverlay.style.display = 'none';
+        });
+
+        document.getElementById('saveAggCsvBtn').addEventListener('click', () => {
+            const selectedCluster = document.getElementById('clusterSelect').value;
+            const itemLabel = currentAggMode === 'references' ? 'Shared Reference' : 'Shared Keyword';
+            const filename = currentAggMode === 'references'
+                ? `Cluster_${selectedCluster}_Shared_References.csv`
+                : `Cluster_${selectedCluster}_Shared_Keywords.csv`;
+
+            let csvContent = `data:text/csv;charset=utf-8,"${itemLabel}","Number of Articles"\n`;
+            currentAggRows.forEach(row => {
+                csvContent += `"${escapeCsv(row.text)}",${row.count}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        let currentSharedRefsData = null;
+        let currentSharedKeywordsData = null;
+
+        function showSharedReferencesPopup(nodeA, nodeB) {
+            const refData = computeSharedReferences(nodeA, nodeB);
+            const kwData = computeSharedKeywords(nodeA, nodeB);
+            currentSharedRefsData = { nodeA, nodeB, ...refData };
+            currentSharedKeywordsData = { nodeA, nodeB, ...kwData };
+
+            document.getElementById("ref-modal-title").textContent =
+                `Shared References & Keywords: "${nodeA.label}" \u2194 "${nodeB.label}"`;
+
+            const body = document.getElementById("ref-modal-body");
+            let html = "";
+
+            // ---- References section ----
+            html += `<h4 style="margin: 0 0 10px 0; color: #1e293b;">Shared References</h4>`;
+            if (!refData.aFound || !refData.bFound) {
+                const missing = [];
+                if (!refData.aFound) missing.push(`"${escapeHtml(nodeA.label)}"`);
+                if (!refData.bFound) missing.push(`"${escapeHtml(nodeB.label)}"`);
+                html += `<p style="color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; padding:10px; border-radius:6px;">
+                    Could not find a "References" field in the Scopus CSV for ${missing.join(' and ')}.
+                    Make sure a Scopus CSV exported with the "References" field included is loaded, and that this
+                    article's title matches between the GML file and the CSV.
+                </p>`;
+            } else {
+                html += `<div style="display:flex; gap:14px; margin-bottom:16px; flex-wrap: wrap;">
+                    <div class="ref-summary-pill" style="background:#f8fafc; border:1px solid #e2e8f0;"><strong>${escapeHtml(nodeA.label)}</strong>: ${refData.aRefs.length} references</div>
+                    <div class="ref-summary-pill" style="background:#f8fafc; border:1px solid #e2e8f0;"><strong>${escapeHtml(nodeB.label)}</strong>: ${refData.bRefs.length} references</div>
+                    <div class="ref-summary-pill" style="background:#ecfdf5; border:1px solid #a7f3d0;"><strong>Shared</strong>: ${refData.shared.length} references</div>
+                </div>`;
+
+                if (refData.shared.length === 0) {
+                    html += `<p style="color:#64748b;">No shared references were found between these two articles' reference lists.</p>`;
+                } else {
+                    html += `<ol class="shared-ref-list">`;
+                    refData.shared.forEach(r => {
+                        html += `<li>${escapeHtml(r)}</li>`;
+                    });
+                    html += `</ol>`;
+                }
+            }
+
+            // ---- Author Keywords section ----
+            html += `<hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">`;
+            html += `<h4 style="margin: 0 0 10px 0; color: #1e293b;">Shared Author Keywords</h4>`;
+            if (!kwData.aFound || !kwData.bFound) {
+                const missing = [];
+                if (!kwData.aFound) missing.push(`"${escapeHtml(nodeA.label)}"`);
+                if (!kwData.bFound) missing.push(`"${escapeHtml(nodeB.label)}"`);
+                html += `<p style="color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; padding:10px; border-radius:6px;">
+                    Could not find an "Author Keywords" field in the Scopus CSV for ${missing.join(' and ')}.
+                    Make sure a Scopus CSV exported with the "Author Keywords" field included is loaded.
+                </p>`;
+            } else {
+                html += `<div style="display:flex; gap:14px; margin-bottom:16px; flex-wrap: wrap;">
+                    <div class="ref-summary-pill" style="background:#f8fafc; border:1px solid #e2e8f0;"><strong>${escapeHtml(nodeA.label)}</strong>: ${kwData.aKw.length} keywords</div>
+                    <div class="ref-summary-pill" style="background:#f8fafc; border:1px solid #e2e8f0;"><strong>${escapeHtml(nodeB.label)}</strong>: ${kwData.bKw.length} keywords</div>
+                    <div class="ref-summary-pill" style="background:#ecfdf5; border:1px solid #a7f3d0;"><strong>Shared</strong>: ${kwData.shared.length} keywords</div>
+                </div>`;
+
+                if (kwData.shared.length === 0) {
+                    html += `<p style="color:#64748b;">No shared author keywords were found between these two articles.</p>`;
+                } else {
+                    html += `<div style="display:flex; flex-wrap:wrap; gap:8px;">`;
+                    kwData.shared.forEach(k => {
+                        html += `<span style="background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3; padding:4px 10px; border-radius:999px; font-size:0.85rem;">${escapeHtml(k)}</span>`;
+                    });
+                    html += `</div>`;
+                }
+            }
+
+            body.innerHTML = html;
+            document.getElementById("ref-modal-overlay").style.display = "flex";
         }
 
         function populateClusterDropdown() {
@@ -686,14 +1335,26 @@
             } else {
                 updateClusterTableVisibility();
             }
+            updateClusterScopedButtons();
             renderNetwork();
         });
 
         document.getElementById('clusterSelect').addEventListener('change', () => {
             updateClusterTableVisibility();
+            updateClusterScopedButtons();
             renderNetwork();
         });
         document.getElementById('nodeSizeSelect').addEventListener('change', () => renderNetwork());
+
+        // "Show Shared References" and "Show Keywords" only make sense once the user has drilled
+        // into one specific cluster (not the "All Clusters" overview, and not while conflated).
+        function updateClusterScopedButtons() {
+            const isConflated = document.getElementById('conflateToggle').checked;
+            const selectedCluster = document.getElementById('clusterSelect').value;
+            const enable = !isConflated && selectedCluster !== "All" && rawData.nodes.length > 0;
+            document.getElementById('showSharedRefsBtn').disabled = !enable;
+            document.getElementById('showKeywordsBtn').disabled = !enable;
+        }
 
         function updateClusterTableVisibility() {
             const selectedCluster = document.getElementById('clusterSelect').value;
@@ -1002,6 +1663,17 @@
                     selectedNodeId = null;
                 }
                 updateFocusState();
+
+                // Shared-references popup: only offered when the user has drilled into a
+                // specific cluster (not the "All Clusters" overview), and only when the edge
+                // was just selected (not when clicking it again to deselect/toggle off).
+                if (selectedCluster !== "All" && selectedLinkData === d) {
+                    const sNode = (d.source && d.source.id !== undefined) ? d.source : nodeMap.get(d.source);
+                    const tNode = (d.target && d.target.id !== undefined) ? d.target : nodeMap.get(d.target);
+                    if (sNode && tNode) {
+                        showSharedReferencesPopup(sNode, tNode);
+                    }
+                }
             });
 
             svg.on("click", () => {
@@ -1057,8 +1729,7 @@
                     }
                 });
 
-                let normTitle = (node.parsedDesc.title || node.label).toLowerCase().trim();
-                let scopus = scopusDataMap.get(normTitle);
+                let scopus = scopusDataMap.get(node.id);
 
                 return {
                     nodeId: node.id,
@@ -1251,8 +1922,7 @@
             document.getElementById("node-modal-title").textContent = node.label;
             const bodyEl = document.getElementById("node-modal-body");
 
-            let normTitle = (node.parsedDesc.title || node.label).toLowerCase().trim();
-            let scopus = scopusDataMap.get(normTitle);
+            let scopus = scopusDataMap.get(node.id);
 
             let authorsVal = scopus ? scopus.authors : node.parsedDesc.authors;
             let yearVal = scopus ? scopus.year : node.parsedDesc.year;
@@ -1300,8 +1970,7 @@
             const node = nodeMap.get(activeSelectedNodeId);
             if (!node) return;
 
-            let normTitle = (node.parsedDesc.title || node.label).toLowerCase().trim();
-            let scopus = scopusDataMap.get(normTitle);
+            let scopus = scopusDataMap.get(node.id);
 
             let author = scopus ? scopus.authors : (node.parsedDesc.authors || 'Unknown');
             let title = scopus ? scopus.title : (node.parsedDesc.title || node.label);
@@ -1348,6 +2017,65 @@
 
             container.scrollIntoView({ behavior: 'smooth' });
         });
+
+        const refModalOverlay = document.getElementById("ref-modal-overlay");
+        const closeRefModalBtn = document.getElementById("closeRefModalBtn");
+        const closeRefDetailsBtn = document.getElementById("closeRefDetailsBtn");
+        const saveRefCsvBtn = document.getElementById("saveRefCsvBtn");
+        const saveKwCsvBtn = document.getElementById("saveKwCsvBtn");
+
+        closeRefModalBtn.addEventListener("click", () => {
+            refModalOverlay.style.display = "none";
+        });
+        closeRefDetailsBtn.addEventListener("click", () => {
+            refModalOverlay.style.display = "none";
+        });
+        window.addEventListener("click", (e) => {
+            if (e.target === refModalOverlay) refModalOverlay.style.display = "none";
+        });
+
+        saveRefCsvBtn.addEventListener("click", () => {
+            if (!currentSharedRefsData || !currentSharedRefsData.shared) return;
+            const { nodeA, nodeB, shared } = currentSharedRefsData;
+            let filename = `Shared_References_${nodeA.id}_${nodeB.id}.csv`;
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += `"Source A: ${escapeCsv(nodeA.label)}","Source B: ${escapeCsv(nodeB.label)}"\n`;
+            csvContent += "Shared Reference\n";
+            shared.forEach(r => {
+                csvContent += `"${escapeCsv(r)}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        saveKwCsvBtn.addEventListener("click", () => {
+            if (!currentSharedKeywordsData || !currentSharedKeywordsData.shared) return;
+            const { nodeA, nodeB, shared } = currentSharedKeywordsData;
+            let filename = `Shared_Keywords_${nodeA.id}_${nodeB.id}.csv`;
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += `"Source A: ${escapeCsv(nodeA.label)}","Source B: ${escapeCsv(nodeB.label)}"\n`;
+            csvContent += "Shared Author Keyword\n";
+            shared.forEach(k => {
+                csvContent += `"${escapeCsv(k)}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
 
         saveCsvBtn.addEventListener("click", () => {
             const selectedCluster = document.getElementById('clusterSelect').value;
