@@ -388,7 +388,7 @@
 <body>
 
     <header>
-        <h1>VOSviewer Cluster Explorer</h1>
+        <h1>VOSviewer Bibliographic Coupling Cluster Explorer</h1>
         <div class="controls">
             <div class="file-input-group">
                 <label for="gmlFile">VOSviewer GML File:</label>
@@ -415,6 +415,7 @@
             <button id="metricsBtn" class="action-btn" disabled>Show links/weight</button>
             <button id="showSharedRefsBtn" class="action-btn" disabled>Show Shared References</button>
             <button id="showKeywordsBtn" class="action-btn" disabled>Show Keywords</button>
+            <button id="citeAppBtn" class="action-btn">Cite Application</button>
         </div>
     </header>
 
@@ -529,6 +530,23 @@
             </div>
             <div class="modal-footer" style="justify-content: flex-end;">
                 <button id="closeAggArticlesBtn" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for citing this application -->
+    <div id="cite-modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1200;">
+        <div style="background: #fff; width: 640px; max-width: 92vw; max-height: 85vh; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden;">
+            <div class="modal-header">
+                <h3>Cite Application</h3>
+                <button class="close-modal" id="closeCiteModalBtn">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <pre id="citeBibtexText" style="margin: 0; background: #1e293b; color: #f8fafc; padding: 12px; border-radius: 6px; font-size: 0.85rem; white-space: pre-wrap; word-break: break-word;"></pre>
+            </div>
+            <div class="modal-footer" style="justify-content: flex-end;">
+                <button id="copyCiteBtn" class="action-btn">Copy BibTeX</button>
+                <button id="closeCiteBtn" class="action-btn">Close</button>
             </div>
         </div>
     </div>
@@ -661,7 +679,10 @@
                 let clusterMatch = content.match(/cluster\s+(\d+)/);
                 
                 // Robust weight/citations attribute matching (handles unquoted, quoted values, and alternate keys)
-                let weightMatch = content.match(/(?:weight|citations|weight\s*<\s*citations\s*>)\s+"?([0-9\.eE+-]+)"?/i);
+                // Prefer the explicit weight<citations> attribute (e.g. "weight<citations> 45.0000" means 45
+                // citations - the decimal part is ignored); fall back to the older generic matching.
+                let weightMatch = content.match(/weight\s*<\s*citations\s*>\s+"?(\d+)/i)
+                    || content.match(/(?:weight|citations)\s+"?([0-9\.eE+-]+)"?/i);
 
                 let descMatch = content.match(/description\s+"([^"]*)"/);
                 let urlMatch = content.match(/url\s+"([^"]*)"/);
@@ -689,7 +710,7 @@
                         id: +idMatch[1],
                         label: labelMatch ? labelMatch[1] : `Node ${idMatch[1]}`,
                         cluster: clusterMatch ? +clusterMatch[1] : 1,
-                        weight: weightMatch ? +weightMatch[1] : 1,
+                        weight: weightMatch ? Math.floor(+weightMatch[1]) : 1,
                         description: descMatch ? descMatch[1] : "",
                         url: urlMatch ? urlMatch[1] : "",
                         parsedDesc: parsedDesc
@@ -1546,12 +1567,22 @@
                 }
             });
 
+            // Citation-based radius: square-root scale (so node AREA tracks citations) across the
+            // currently displayed nodes, with the largest radius exactly 10x the smallest.
+            const MIN_CITATION_RADIUS = 3;
+            const MAX_CITATION_RADIUS = MIN_CITATION_RADIUS * 10;
+            const citationValues = nodes.map(n => n.weight);
+            const minCitation = citationValues.length ? Math.min(...citationValues) : 0;
+            const maxCitation = citationValues.length ? Math.max(...citationValues) : 0;
+            const citationRadiusScale = (maxCitation > minCitation)
+                ? d3.scaleSqrt().domain([minCitation, maxCitation]).range([MIN_CITATION_RADIUS, MAX_CITATION_RADIUS])
+                : () => 8;
+
             function getNodeRadius(d) {
                 if (sizeMode === 'equal') {
                     return 8;
                 } else if (sizeMode === 'citation') {
-                    // Properly scale based on node's citation/weight attribute values
-                    return Math.max(4, Math.min(28, Math.sqrt(d.weight) * 3.5));
+                    return citationRadiusScale(d.weight);
                 } else if (sizeMode === 'links') {
                     let count = visibleLinksMap.get(d.id) || 0;
                     return Math.max(5, Math.min(22, Math.sqrt(count + 1) * 4));
@@ -2118,6 +2149,47 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        });
+
+        const CITE_BIBTEX = `@software{maulana2026VBC,
+  author       = {Maulana, Ikbal},
+  title        = {{VOSviewer Bibliographic Coupling Cluster Explorer} (Version 0.10)},
+  year         = {2026},
+  type         = {Web-based application},
+  address      = {Jakarta, Indonesia},
+  institution  = {National Research and Innovation Agency (BRIN)},
+}`;
+        const citeModalOverlay = document.getElementById('cite-modal-overlay');
+        document.getElementById('citeAppBtn').addEventListener('click', () => {
+            document.getElementById('citeBibtexText').textContent = CITE_BIBTEX;
+            const copyBtn = document.getElementById('copyCiteBtn');
+            copyBtn.textContent = 'Copy BibTeX';
+            copyBtn.style.background = '';
+            citeModalOverlay.style.display = 'flex';
+        });
+        document.getElementById('closeCiteModalBtn').addEventListener('click', () => { citeModalOverlay.style.display = 'none'; });
+        document.getElementById('closeCiteBtn').addEventListener('click', () => { citeModalOverlay.style.display = 'none'; });
+        window.addEventListener('click', (e) => { if (e.target === citeModalOverlay) citeModalOverlay.style.display = 'none'; });
+        document.getElementById('copyCiteBtn').addEventListener('click', () => {
+            const btn = document.getElementById('copyCiteBtn');
+            const done = () => {
+                btn.textContent = 'Copied!';
+                btn.style.background = '#10b981';
+                setTimeout(() => { btn.textContent = 'Copy BibTeX'; btn.style.background = ''; }, 2000);
+            };
+            const fallback = () => {
+                const ta = document.createElement('textarea');
+                ta.value = CITE_BIBTEX;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); done(); } catch (err) {}
+                document.body.removeChild(ta);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(CITE_BIBTEX).then(done).catch(fallback);
+            } else {
+                fallback();
+            }
         });
 
         function escapeCsv(str) {
