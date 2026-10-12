@@ -405,6 +405,11 @@
             <select id="clusterSelect" disabled>
                 <option value="All">All Clusters</option>
             </select>
+            <label for="layoutSelect" style="font-size: 0.85rem;">Layout:</label>
+            <select id="layoutSelect" disabled>
+                <option value="free" selected>As is</option>
+                <option value="year">Group by Year</option>
+            </select>
             <label for="nodeSizeSelect" style="font-size: 0.85rem;">Node Size:</label>
             <select id="nodeSizeSelect" disabled>
                 <option value="equal">Equal Size</option>
@@ -1366,6 +1371,7 @@
             renderNetwork();
         });
         document.getElementById('nodeSizeSelect').addEventListener('change', () => renderNetwork());
+        document.getElementById('layoutSelect').addEventListener('change', () => renderNetwork());
 
         // "Show Shared References" and "Show Keywords" only make sense once the user has drilled
         // into one specific cluster (not the "All Clusters" overview, and not while conflated).
@@ -1375,6 +1381,16 @@
             const enable = !isConflated && selectedCluster !== "All" && rawData.nodes.length > 0;
             document.getElementById('showSharedRefsBtn').disabled = !enable;
             document.getElementById('showKeywordsBtn').disabled = !enable;
+            // The year-grouped layout is only offered when viewing one specific cluster.
+            document.getElementById('layoutSelect').disabled = !enable;
+        }
+
+        // Returns the publication year (as a number) of a node, or null if unknown.
+        function getNodeYear(node) {
+            const scopus = scopusDataMap.get(node.id);
+            const raw = (scopus && scopus.year && scopus.year !== 'N/A') ? scopus.year : node.parsedDesc.year;
+            const m = String(raw || '').match(/\d{4}/);
+            return m ? +m[0] : null;
         }
 
         function updateClusterTableVisibility() {
@@ -1593,10 +1609,51 @@
                 return 8;
             }
 
-            simulation = d3.forceSimulation(nodes)
-                .force("link", d3.forceLink(links).id(d => d.id).distance(selectedCluster === "All" ? 50 : 95))
-                .force("charge", d3.forceManyBody().strength(selectedCluster === "All" ? -80 : -150))
-                .force("center", d3.forceCenter(width / 2, height / 2));
+            const useYearLayout = selectedCluster !== "All" &&
+                document.getElementById('layoutSelect').value === 'year';
+
+            if (useYearLayout) {
+                // One invisible vertical line per year found in the data (all clusters), evenly
+                // spaced left to right. Nodes with no known year share a final extra line.
+                const allYears = Array.from(new Set(rawData.nodes.map(getNodeYear).filter(y => y !== null)))
+                    .sort((a, b) => a - b);
+                const hasUnknown = nodes.some(n => getNodeYear(n) === null);
+                const columns = allYears.slice();
+                if (hasUnknown) columns.push('N/A');
+                const marginX = 50;
+                const usableW = Math.max(1, width - marginX * 2);
+                const step = columns.length > 1 ? usableW / (columns.length - 1) : 0;
+                const colX = new Map();
+                columns.forEach((y, i) => colX.set(y, columns.length > 1 ? marginX + i * step : width / 2));
+                nodes.forEach(n => {
+                    const y = getNodeYear(n);
+                    n.yearX = colX.get(y === null ? 'N/A' : y);
+                });
+
+                // Faint year labels at the top (the vertical lines themselves stay invisible).
+                container.append("g").selectAll("text")
+                    .data(columns)
+                    .join("text")
+                    .attr("x", y => colX.get(y))
+                    .attr("y", 16)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "10px")
+                    .style("fill", "#94a3b8")
+                    .style("pointer-events", "none")
+                    .text(y => y);
+
+                simulation = d3.forceSimulation(nodes)
+                    .force("link", d3.forceLink(links).id(d => d.id).strength(0.02))
+                    .force("charge", d3.forceManyBody().strength(-300))
+                    .force("x", d3.forceX(d => d.yearX).strength(1))
+                    .force("y", d3.forceY(height / 2).strength(0.01))
+                    .force("collide", d3.forceCollide(d => getNodeRadius(d) + 10).strength(1).iterations(3));
+            } else {
+                simulation = d3.forceSimulation(nodes)
+                    .force("link", d3.forceLink(links).id(d => d.id).distance(selectedCluster === "All" ? 50 : 95))
+                    .force("charge", d3.forceManyBody().strength(selectedCluster === "All" ? -80 : -150))
+                    .force("center", d3.forceCenter(width / 2, height / 2));
+            }
 
             const linkGroup = container.append("g");
             const linkSelection = linkGroup.selectAll("g")
